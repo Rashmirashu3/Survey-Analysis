@@ -187,16 +187,62 @@ survey_data_final_missing_which <- survey_data_final[survey_data_final$ANON.Cont
 
 ###########################################################################
 ############## Sales data combine with survey key #############
-##### Input files: Survey and email lists     Output_file:             ####
+##### Input files: sales_policy_data and survey_key   Output_file:             ####
 ###########################################################################
+###Dharahas Code##########
+
+
+###list of unique ipins from response id table
+Ipinlist <- unique(survey_key$ANON.IPN)
+
+sales_sur_1 <-  sales_policy_data[sales_policy_data$ANON.IPN %in% Ipinlist, ]
+##yes they do exist now separate them to single level
+
+####aggregation of duplicates into 1 row
+#aggregation function
+agg_fun <- function(x)
+{
+  x = paste(unique(x), collapse = ",")
+}
+
+
+#groupby to unique level
+#mutate by applying fun2 function
+#this merges unique values and concatenates the unique values into string
+#doing this for analysis purpose only one hot encoding can be done on this as
+#well but for initial aggregation we can use this
+#then after we have 1 data set we can split and put in different columns
+# for better understanding of the code 
+# add filter(n() == 8) %>% in between group by and 
+#mutate function
+repeatedipindata <-
+  sales_sur_1 %>%
+  group_by(ANON.Contract,ANON.IPN) %>%
+  mutate_all(agg_fun)
 
 
 
 
 
+#remove duplicates generated
+sales_sur_merge_ready <- repeatedipindata[!duplicated(repeatedipindata), ]
+
+#merge with survey key 
+check2 <- merge(survey_key, sales_sur_merge_ready, by=c("ANON.IPN","ANON.Contract"))
 
 
+length(unique(check2$ResponseId))
+##6854 observations are found right now which are unique
 
+#extract that one response id where that combination does not exist
+lol <- survey_key %>% filter(!(ResponseId %in% check2$ResponseId))
+##findout from kelly :O
+
+
+##to aggregate the above file "check2" to level of response Id's what we can do is
+##just use the code for repeatedipin data but 
+##group by responseid and then do the mutate all with same function
+##remove dulicates just like in "sales_sur_merge_ready"
 
 ###########################################################################
 ############## combine sales data and survey data #########################
