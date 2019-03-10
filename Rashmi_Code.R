@@ -126,47 +126,70 @@ unique.pin<- sales_policy_data[!str_count(sales_policy_data$ANON.IPN,',')==0,]
 ##### Input files: Survey and email lists     Output_file:             ####
 ###########################################################################
 
+##MOHIT CODE##
+survey_data <- box_search("Final Survey Themes Masked without Original Keys 2_19_2019.csv")%>% box_read()
+survey_data_old <- box_search("Final Survey Themes Masked without Original Keys.csv") %>% box_read()
 
-survey<- box_search("Final Survey Themes Masked without Original Keys 2_19_2019.csv") %>% box_read()
+#Finding missing values
+survey_data_missing <- colSums(is.na(survey_data)|survey_data == '')
+survey_data_missing_df <- as.data.frame(survey_data_missing)
 
-pins<-sapply(strsplit(survey$ANON.Contract,","),FUN=function(x){length(x[x!="Null"])})
-sum(pins)
-x2<-separate_rows(x1,ANON.IPN, sep = ",", convert = FALSE)
-sum(ipins)
-colnames(survey)
-survey.unique.pin<- survey[!str_count(survey$ANON.IPN,',')==0,]
-blank_sr_data<-survey[survey$ANON.Contract == "",]
+#Finding against which response ids, records not available
+survey_data_missing_which <- survey_data[survey_data$ANON.Contract=="",]
 
-########## Email list #############
+#Filter 11 rows from 50 variables table(Final Survey Themes.. 2_19_2019) having null email data
+d1 <- filter(survey_data, is.na(survey_data$ANON.IPN)|survey_data$ANON.IPN == '')
+View(d1)
 
-email_List <- box_search("Final Email List Anonymized 2_19_2019.csv") %>% box_read()
+#Select response id from d1
+d2 <- d1 %>% select(ResponseId)
+View(d2)
 
-sum(email_List$AN.Policies)
+#Filter 40 variable table(Final survey themes...) with response id in d2
+d3 <-survey_data_old %>% filter(ResponseId %in% d2$ResponseId)
+View(d3)
 
-x<- email_List[!str_count(email_List$ANON.IPN,',')==0,]
+#Select ANON.IPN and ANON.Contract from d3
 
-x<- subset(x, select = -c(RP_COUNT_POLICY,RP_COUNT_PLAN,Life.Policies,AN.Policies,DI.Policies,IND_COUNT_POLICY,IND_COUNT_IPN))
-x.contract.list<-sapply(strsplit(x$ANON.Contract,","),FUN=function(x){x[x!="Null"]})
-x1<-separate_rows(x,ANON.Contract, sep = ",", convert = FALSE)
-x2<-separate_rows(x1,ANON.IPN, sep = ",", convert = FALSE)
-x2[duplicated(x2)]
+d4 <- d3 %>% select(ANON.IPN, ANON.Contract)
 
-y<- email_List[str_count(email_List$ANON.IPN,',')==0,]
+#Filter 10 variable(old email data) table on anon.ipn and anon.contract columns
+#to the ANON.IPN and ANON.Contract against the 11 response ids
+d5 <- email_list_old %>% filter(ANON.IPN %in% d4$ANON.IPN & ANON.Contract %in% d4$ANON.Contract)
+View(d5) 
 
-email_List_Pin <- email_List$ANON.Contract
-pins<-sapply(strsplit(email_List_Pin,","),FUN=function(x){length(x[x!="Null"])})
-sum(pins)
+#joining d3 and d5
+d6 <- left_join(d3, d5, by =  "ANON.Contract")
+#removing duplicated columns 
+d6 <- d6[,-c(42,45,51)]
+View(d6)
+
+#Changing names of the columns for uniformity
+library(data.table)
+setnames(d6, old=c("RP.x","IND.x","ANON.IPN.x"), new=c("RP", "IND", "ANON.IPN"))
+View(d6)
 
 
-email_List_iPin <- email_List$ANON.IPN
-ipins<-sapply(strsplit(email_List_iPin,","),FUN=function(x){length(x[x!="Null"])})
-sum(ipins)
-x<-email_List[email_List$ANON.Contract]
+#Adding 2 missing columns not present in the email and the old survey data
+d7 <- d6 %>% mutate(Q_URL = '', Entity = '') 
+View(d7)
+
+#Removing observations for which email data is not given 
+survey_data1 <- survey_data[-c(425,950,1080,1468,2314,3978,4912,5060,6302,6335,6829),]
+Survey <- 
+  
+#adding/merging the required obtained records from email data with the survey data
+survey_data_final <- rbind(survey_data1, d7)
+
+#reconfirming if there are any records missing against the earlier founded 11 
+survey_data_final_missing_which <- survey_data_final[survey_data_final$ANON.Contract=="",]
+
 
 ###########################################################################
 ############## Sales data combine with survey key #############
 ##### Input files: Survey and email lists     Output_file:             ####
 ###########################################################################
+
 
 
 
