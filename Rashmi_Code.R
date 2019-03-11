@@ -20,7 +20,7 @@ box_ls(dir_id = box_getwd())
 ###########################################################################
 
 survey_key<- box_search("Survey Key.csv") %>% box_read()
-rm(survey_key)
+#rm(survey_key)
 
 # Initial Control Totals
 summary(unique(survey_key$ANON.Contract))
@@ -29,7 +29,7 @@ summary(unique(survey_key$ANON.IPN))
 # Missing values
 blank<-survey_key[survey_key$ANON.IPN=="",]
 blank<-survey_key[survey_key$ANON.Contract=="",]
-rm(blank)
+#rm(blank)
 
 #There are 3 missing values which needs to be mapped from the old survey data
 
@@ -38,11 +38,11 @@ old_survey<- box_search("Final Survey Themes Masked without Original Keys.csv") 
 
 #Replace missing with NA
 library(stringr)
-is.na(survey_key$ANON.IPN) <- survey_key$ANON.IPN==''
-is.na(survey_key$ANON.Contract) <- survey_key$ANON.Contract==''
+#is.na(survey_key$ANON.IPN) <- survey_key$ANON.IPN==''
+#is.na(survey_key$ANON.Contract) <- survey_key$ANON.Contract==''
 #or
-blank$ANON.Contract[blank$ANON.Contract==""]<-NA
-blank$ANON.Contract[which(is.na(blank$ANON.Contract))]
+#blank$ANON.Contract[blank$ANON.Contract==""]<-NA
+#blank$ANON.Contract[which(is.na(blank$ANON.Contract))]
 
 #Map from old survey
 survey_key$ANON.Contract <-
@@ -64,7 +64,7 @@ dups<-survey_key[duplicated(survey_key),]
 
 #Check for missing values
 blank<-survey_key[survey_key$ANON.Contract=="",]
-rm(blank)
+#rm(blank)
 
 # Unique values
 unique.ipn<- survey_key[!str_count(survey_key$ANON.IPN,',')==0,]
@@ -119,7 +119,6 @@ sales_policy_data<-rbind(sales_data,add_sales)
 # Duplicates
 dups<-sales_policy_data[duplicated(sales_policy_data),]
 unique.pin<- sales_policy_data[!str_count(sales_policy_data$ANON.IPN,',')==0,]
-
 
 ###########################################################################
 ############## Survey data has email list and survey combined #############
