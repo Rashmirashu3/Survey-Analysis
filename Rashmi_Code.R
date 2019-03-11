@@ -248,38 +248,4 @@ lol <- survey_key %>% filter(!(ResponseId %in% check2$ResponseId))
 ######## Input files: Survey and email lists     Output_file:  ############
 ###########################################################################
 
-summary(survey)
-
-str(sales_data)
-summary(survey$ResponseId)
-table(survey$Q1_NPS_GROUP,survey$Q1)
-(as.Date(Email_List$LAST_LOGIN_DATE))
-str(Email_List)
-attach(Email_List)
-rowSums(is.na())
-table(sales_data$Product.Type)
-41012
-sum(Email_List$IND_COUNT_POLICY,na.rm=T)
-table(Email_List$RP)
-unique(Email_List$IND)
-table(Email_List$IND)
-table(sum(Life.Policies),sum(DI.Policies),sum(AN.Policies))
-table(((sales_data$Client.Zip.Code.5digit)))
-sum(email_List$IND_COUNT_POLICY=="")
-unique(survey$IND)
-table(survey$IND)
-
-table(Q3_Relationship,
-Q3_Tech,
-Q3_Product,
-Q3_Service,
-Q3_Ethics,
-Q3_Communication,
-Q3_Ease,
-Q3_Company,
-Q3_HO_Service,
-Q3_Performance_Fee)
-
-attach(sales_data)
-table((Product.Line))
-table(sales_data$Policy.Client.Role.Type)
+#Anusha code
