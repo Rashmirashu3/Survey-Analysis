@@ -1,4 +1,4 @@
-install.packages('boxr')
+#install.packages('boxr')
 library(boxr)
 library(dplyr)
 library(memisc)
@@ -6,6 +6,7 @@ library(stringr)
 library(tidyr)
 library(gtools)
 library(data.table)
+library(caret)
 devtools::source_gist("4959237")
 
 box_auth()
@@ -48,14 +49,14 @@ library(stringr)
 survey_key$ANON.Contract <-
   ifelse(
     survey_key$ANON.Contract == "",
-    old_survey$ANON.Contract[trim(old_survey$ResponseId) == trim(survey_key$ResponseId)],
+    old_survey$ANON.Contract[trimws(old_survey$ResponseId) == trimws(survey_key$ResponseId)],
     survey_key$ANON.Contract
   )
 
 survey_key$ANON.IPN <-
   ifelse(
     survey_key$ANON.IPN == "",
-    old_survey$ANON.IPN[trim(old_survey$ResponseId) == trim(survey_key$ResponseId)],
+    old_survey$ANON.IPN[trimws(old_survey$ResponseId) == trimws(survey_key$ResponseId)],
     survey_key$ANON.IPN
   )
 
@@ -141,7 +142,7 @@ d1 <- filter(survey_data, is.na(survey_data$ANON.IPN)|survey_data$ANON.IPN == ''
 View(d1)
 
 #Select response id from d1
-d2 <- d1 %>% select(ResponseId)
+d2 <- d1 %>% dplyr::select(ResponseId)
 View(d2)
 
 #Filter 40 variable table(Final survey themes...) with response id in d2
@@ -150,7 +151,7 @@ View(d3)
 
 #Select ANON.IPN and ANON.Contract from d3
 
-d4 <- d3 %>% select(ANON.IPN, ANON.Contract)
+d4 <- d3 %>% dplyr::select(ANON.IPN, ANON.Contract)
 
 #Filter 10 variable(old email data) table on anon.ipn and anon.contract columns
 #to the ANON.IPN and ANON.Contract against the 11 response ids
@@ -177,8 +178,8 @@ View(d7)
 survey_data1 <- survey_data[-c(425,950,1080,1468,2314,3978,4912,5060,6302,6335,6829),]
 Survey <- 
   
-#adding/merging the required obtained records from email data with the survey data
-survey_data_final <- rbind(survey_data1, d7)
+  #adding/merging the required obtained records from email data with the survey data
+  survey_data_final <- rbind(survey_data1, d7)
 
 #reconfirming if there are any records missing against the earlier founded 11 
 survey_data_final_missing_which <- survey_data_final[survey_data_final$ANON.Contract=="",]
@@ -248,38 +249,106 @@ lol <- survey_key %>% filter(!(ResponseId %in% check2$ResponseId))
 ######## Input files: Survey and email lists     Output_file:  ############
 ###########################################################################
 
-summary(survey)
+#Anusha code
+View(check2)
 
-str(sales_data)
-summary(survey$ResponseId)
-table(survey$Q1_NPS_GROUP,survey$Q1)
-(as.Date(Email_List$LAST_LOGIN_DATE))
-str(Email_List)
-attach(Email_List)
-rowSums(is.na())
-table(sales_data$Product.Type)
-41012
-sum(Email_List$IND_COUNT_POLICY,na.rm=T)
-table(Email_List$RP)
-unique(Email_List$IND)
-table(Email_List$IND)
-table(sum(Life.Policies),sum(DI.Policies),sum(AN.Policies))
-table(((sales_data$Client.Zip.Code.5digit)))
-sum(email_List$IND_COUNT_POLICY=="")
-unique(survey$IND)
-table(survey$IND)
 
-table(Q3_Relationship,
-Q3_Tech,
-Q3_Product,
-Q3_Service,
-Q3_Ethics,
-Q3_Communication,
-Q3_Ease,
-Q3_Company,
-Q3_HO_Service,
-Q3_Performance_Fee)
+# convert to factors ------------------------------------------------------
 
-attach(sales_data)
-table((Product.Line))
-table(sales_data$Policy.Client.Role.Type)
+merge_ready_copy <- check2
+merge_ready_copy$Coverage.Status...ACORD.Name <- as.factor(merge_ready_copy$Coverage.Status...ACORD.Name)
+merge_ready_copy$Product.Line <- as.factor(merge_ready_copy$Product.Line)
+merge_ready_copy$Product.Type <- as.factor(merge_ready_copy$Product.Type)
+merge_ready_copy$Bill.Frequency <- as.factor(merge_ready_copy$Bill.Frequency)
+merge_ready_copy$Billing.Mode <- as.factor(merge_ready_copy$Billing.Mode)
+merge_ready_copy$Policy.Client.Role.Type <- as.factor(merge_ready_copy$Policy.Client.Role.Type)
+merge_ready_copy$Owner.Age.Bin <- as.factor(merge_ready_copy$Owner.Age.Bin)
+merge_ready_copy$Owner.Gender <- as.factor(merge_ready_copy$Owner.Gender)
+merge_ready_copy$Agent.Type <- as.factor(merge_ready_copy$Agent.Type)
+merge_ready_copy$Agent.Tenure.Bin <- as.factor(merge_ready_copy$Agent.Tenure.Bin)
+merge_ready_copy$Agent.Change <- as.factor(merge_ready_copy$Agent.Change)
+merge_ready_copy$Agent.Age.Bin <- as.factor(merge_ready_copy$Agent.Age.Bin)
+merge_ready_copy$Agent.Gender <- as.factor(merge_ready_copy$Agent.Gender)
+merge_ready_copy$Owner.Gender <- as.factor(merge_ready_copy$Owner.Gender)
+merge_ready_copy$Policy.Tenure.Bin <- as.factor(merge_ready_copy$Policy.Tenure.Bin)
+merge_ready_copy$Insured.Gender <- as.factor(merge_ready_copy$Insured.Gender)
+merge_ready_copy$Insured.Underwriting.Tobacco.Code <- as.factor(merge_ready_copy$Insured.Underwriting.Tobacco.Code)
+merge_ready_copy$Insured.Issue.Age.Bin <- as.factor(merge_ready_copy$Insured.Issue.Age.Bin)
+merge_ready_copy$Same.OI <- as.factor(merge_ready_copy$Same.OI)
+merge_ready_copy$Client.Country <- as.factor(merge_ready_copy$Client.Country)
+merge_ready_copy$Annualized.Premium <- as.numeric(merge_ready_copy$Annualized.Premium)
+
+
+# Convert to factors survey data ------------------------------------------
+
+
+survey_data_copy <- survey_data_final
+survey_data_copy$Progress <- as.factor(survey_data_copy$Progress)
+survey_data_copy$Finished <- as.factor(survey_data_copy$Finished)
+survey_data_copy$Q1_NPS_GROUP <- as.factor(survey_data_copy$Q1_NPS_GROUP)
+survey_data_copy$Q7 <- as.factor(survey_data_copy$Q7)
+survey_data_copy$RP <- as.factor(survey_data_copy$RP)
+survey_data_copy$Entity <- as.factor(survey_data_copy$Entity)
+
+survey_data_copy$Q1 <- ordered(survey_data_copy$Q1, levels = 0:10)
+survey_data_copy$Q4_1 <- ordered(survey_data_copy$Q4_1, levels = 1:7)
+survey_data_copy$Q10_1 <- ordered(survey_data_copy$Q10_1, levels = 1:7)
+survey_data_copy$Q6_1 <- ordered(survey_data_copy$Q6_1, levels = 1:7)
+
+#one hot encoding
+###################################################################################
+#dmy <- dummyVars( "~ Q1", data = survey_data_copy)
+#trnsf <- data.frame(predict(dmy, newdata = survey_data_copy))
+#trnsf
+merge_survey_sales <- inner_join(survey_data_copy, merge_ready_copy,
+                                 by ="ResponseId")
+View(merge_survey_sales)
+nrow(merge_survey_sales)
+
+merge_survey_sales %>%
+  group_by(ResponseId)
+
+
+# Plots -------------------------------------------------------------------
+filter(survey_data_copy, Q1_NPS_GROUP != "NA" & Q1_NPS_GROUP != "") %>%
+  ggplot(aes(Q1_NPS_GROUP)) + 
+  geom_bar(fill = "steelblue", width = 0.2) +
+  xlab("NPS Groups")
+
+filter(survey_data_copy, Q1 >=0) %>%
+  ggplot(aes(Q1)) + 
+  geom_bar(fill = "steelblue") +
+  facet_grid(. ~ na.omit(Q1_NPS_GROUP))+
+  xlab("NPS Score")
+
+filter(merge_survey_sales, Owner.Age.Bin != "NA" & Q1 != "NA") %>%
+  dplyr::select(Owner.Age.Bin, Q1_NPS_GROUP,ResponseId) %>%
+  group_by(ResponseId) %>% 
+  unique() %>%
+  ggplot(aes(Owner.Age.Bin, fill = Q1_NPS_GROUP)) +
+  geom_bar() +
+  scale_fill_manual(values = c("tomato2", "slategray3", "steelblue"))+
+  labs(x = "Owner Age Bin",
+       fill = "NPS Group")
+
+filter(merge_survey_sales, Agent.Gender != "NA"& Agent.Gender != "" &
+         Q1_NPS_GROUP != "NA" & Q1_NPS_GROUP != "") %>%
+  dplyr::select(Agent.Gender, Q1_NPS_GROUP, ResponseId) %>%
+  group_by(ResponseId) %>%
+  unique() %>%
+  ggplot(aes(Agent.Gender)) +
+  geom_density(color = "Darkseagreen")
+
+
+filter(merge_survey_sales, Agent.Gender != "NA"& Agent.Gender != "" &
+         Q1_NPS_GROUP != "NA" & Q1_NPS_GROUP != "") %>%
+  dplyr::select(Agent.Gender, Q1_NPS_GROUP, ResponseId) %>%
+  group_by(ResponseId) %>%
+  unique() %>%
+  ggplot(aes(Q1_NPS_GROUP, fill = Agent.Gender)) +
+  geom_bar(width = 0.5)+
+  scale_fill_manual(values = c("tomato2", "slategray3", "steelblue", "grey")) +
+  xlab("Q1 NPS GROUP")
+
+
+
