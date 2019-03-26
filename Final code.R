@@ -7,6 +7,7 @@ library(tidyr)
 library(gtools)
 library(data.table)
 library(caret)
+library(randomForest)
 library(GGally)
 library(corrplot)
 devtools::source_gist("4959237")
@@ -417,3 +418,101 @@ filter(merge_survey_sales, Life.Policies > 0) %>%
   unique() %>%
   ggplot(aes(Main.Agency.State, Coverage.Face.Amount)) +
   geom_boxplot(fill = "steelblue")
+
+
+#######  End of Data Wrangling ###########
+
+#######################################################################################################################################
+##############################################       Data Analysis       ##############################################################
+#######################################################################################################################################
+
+#Please include any analysis part below in the same format
+
+#######################################################################################################################################
+############################################# 1. Analysis -Key drivers  (Rashmi code) #################################################
+#######################################################################################################################################
+
+test<-survey_data_final %>% dplyr::select(Q1_NPS_GROUP,Q3_Relationship,Q3_Tech,Q3_Product,Q3_Service,Q3_Ethics,Q3_Communication,Q3_Ease,Q3_Company,Q3_HO_Service,Q3_Performance_Fee,Q7_Service,Q7_Product,Q7_Price,Q7_Communication,Q7_Resources,Q7_Administration,Q7_Relationship,Q7_Technology) 
+
+TEST2<- test%>% mutate_all(function(x) ifelse(x%in%"X", 1,x))
+
+TEST3<- TEST2 %>% mutate_at(vars(-Q1_NPS_GROUP), as.numeric) %>% mutate_all(function(x) ifelse(x%in%NA, 0,x))
+
+#subset into promoters
+
+prom_test<-TEST3 %>% filter(Q1_NPS_GROUP=="Promoter")
+
+prom<-colSums(prom_test[,!colnames(prom_test)%in% c("Q1_NPS_GROUP")])
+
+prom<-as.data.frame(prom)
+
+#subset into neutrals
+
+neu_test<-TEST3 %>% filter(Q1_NPS_GROUP=="Passive")
+
+neu<-colSums(neu_test[,!colnames(neu_test)%in% c("Q1_NPS_GROUP")])
+neu<-as.data.frame(neu)
+
+#subset into detractors
+
+det_test<-TEST3 %>% filter(Q1_NPS_GROUP=="Detractor")
+
+det<-colSums(det_test[,!colnames(det_test)%in% c("Q1_NPS_GROUP")])
+det<-as.data.frame(det)
+
+fin_drivers<-cbind(prom,det,neu)
+
+#######################################################################################################################################
+############################################# 2. Random forest - Variable Importance on Survey data (Rashmi code) ###################################
+#######################################################################################################################################
+
+require(randomForest)
+
+#Columns needed for analysis
+list_col<-c("Q1","Q1_NPS_GROUP","Q4_1","Q10_1","Q6_1","Q7","Q3_Relationship","Q3_Tech","Q3_Product","Q3_Service","Q3_Ethics","Q3_Communication","Q3_Ease","Q3_Company","Q3_HO_Service","Q3_Performance_Fee", "Q7_Service","Q7_Product","Q7_Price","Q7_Communication","Q7_Resources","Q7_Administration","Q7_Relationship","Q7_Technology","RP","RP_COUNT_POLICY","RP_COUNT_PLAN","IND","Life.Policies","DI.Policies","AN.Policies","IND_COUNT_POLICY","IND_COUNT_PLAN","IND_COUNT_IPN","Entity")
+
+#Check data types for selected columns
+str(survey_data_final[, (names(survey_data_final) %in% list_col)])
+
+## Note: Check if your dependent var has missing values or nulls
+#Remove missing rows of dependent column
+survey_data_final1<-survey_data_final1[!survey_data_final1$Q1_NPS_GROUP=="",]
+
+#Final data needed for random forest
+rfdata<-survey_data_final1[,(names(survey_data_final1) %in% list_col)]
+
+## Note: Below step is data manipulation and needs to be done as per the data requirement
+# Replace X in certain columns with 1's and replace NA's with 0
+
+LISTT<-c("Q3_Relationship","Q3_Tech","Q3_Product","Q3_Service","Q3_Ethics","Q3_Communication","Q3_Ease","Q3_Company","Q3_HO_Service","Q3_Performance_Fee", "Q7_Service","Q7_Product","Q7_Price","Q7_Communication","Q7_Resources","Q7_Administration","Q7_Relationship","Q7_Technology")
+rfdata[,names(rfdata) %in% LISTT]<- rfdata[,names(rfdata) %in% LISTT] %>% dplyr::mutate_all(function(x)ifelse(x=="X",1,0))
+rfdata2<-rfdata %>% mutate_all(function(x) ifelse(x%in%NA, 0,x))
+str(rfdata2)
+
+##Here everything needs to be either INT or Factor 
+
+#Convert character columns to factors
+col_names <- c("Q7","Q1_NPS_GROUP","Q3_Relationship","Q3_Tech","Q3_Product","Q3_Service","Q3_Ethics","Q3_Communication","Q3_Ease","Q3_Company","Q3_HO_Service","Q3_Performance_Fee", "Q7_Service","Q7_Product","Q7_Price","Q7_Communication","Q7_Resources","Q7_Administration","Q7_Relationship","Q7_Technology","RP","RP_COUNT_POLICY","RP_COUNT_PLAN","IND","Entity")
+rfdata2[,col_names] <- lapply(rfdata2[,col_names] , factor)
+
+str(rfdata2)
+dim(rfdata2)
+
+#Fitting Random forest
+##Note: Please remove any fields that are overly dependent sometimes it might not help 
+survey.rf=randomForest(Q1_NPS_GROUP ~ . , data = rfdata2[,!names(rfdata2) %in% c("Q1")], na.action=na.omit)
+survey.rf
+
+#Tally rf result with the actuals
+table(rfdata2$Q1_NPS_GROUP)
+
+#For Classification problem - errors in each class and Black line- OOB error
+plot(survey.rf)
+
+#Plot for variable importance
+library(caret)
+varImpPlot(survey.rf,sort = T, n.var=10, main="Top 10 - Variable Importance")
+
+#Variable Importance
+var.imp = data.frame(importance(survey.rf,type=2))
+
