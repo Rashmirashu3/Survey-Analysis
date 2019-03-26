@@ -242,11 +242,36 @@ length(unique(check2$ResponseId))
 lol <- survey_key %>% filter(!(ResponseId %in% check2$ResponseId))
 ##findout from kelly :O
 
+######################new code 25/03##########################
 
-##to aggregate the above file "check2" to level of response Id's what we can do is
-##just use the code for repeatedipin data but 
-##group by responseid and then do the mutate all with same function
-##remove dulicates just like in "sales_sur_merge_ready"
+#convert character "NAs" into actual N/a
+check2 <-
+  check2 %>% mutate_if(is.character, funs(na_if(., "NA")))
+
+#remove amount columns and same.OI which is unnecessary
+survey_key_no_amounts <-
+  check2[,!names(check2) %in% c("Account.Value",
+                                "Annualized.Premium",
+                                "Net.Cash.Value",
+                                "Coverage.Face.Amount",
+                                "Same.OI")]
+
+
+#group by and aggregating to response id level
+unique_level_Rid_dup <- 
+  survey_key_no_amounts %>%
+  group_by(ResponseId) %>%
+  mutate_all(agg_fun)
+#remove dups
+unique_level_Rid <- unique_level_Rid_dup[!duplicated(unique_level_Rid_dup), ]
+#remove same repeated columns from sales final data
+survey_data_final <- survey_data_final[,!names(survey_data_final) %in% c("ANON.IPN","ANON.Contract")]
+#merge the data
+final_merge_data_set <- merge(unique_level_Rid,survey_data_final,by = "ResponseId")
+
+#change NA's appended into blank string ##hapens for zipcode of client alone as it has NA value
+final_merge_data_set <-
+  final_merge_data_set %>% mutate_if(is.character, funs(gsub(",NA","",.)))
 
 ###########################################################################
 ############## combine sales data and survey data #########################
