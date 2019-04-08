@@ -10,6 +10,10 @@ library(caret)
 library(randomForest)
 library(GGally)
 library(corrplot)
+#install below packages
+library(qdap)
+library(mltools)
+library(fastDummies)
 devtools::source_gist("4959237")
 
 box_auth()
@@ -183,24 +187,270 @@ survey_data_final_missing_which <- survey_data_final[survey_data_final$ANON.Cont
 
 ###########################################################################
 ############## Sales data combine with survey key #############
-##### Input files: sales_policy_data and survey_key   Output_file:             ####
+##### Input files: sales_policy_data and survey_key   Output_file:####
 ###########################################################################
 ###Dharahas Code##########
+
+
+
+
+##code on 4/7/2019# changing amount columns by splitting to di an and life
+#life policy amount coulumns####
+##to be changed later to a better code format###
+sales_policy_data$life.Annualized.Premium <-
+  ifelse(
+    !is.na(sales_policy_data$Annualized.Premium) &
+      sales_policy_data$Product.Line == "IND LIFE",
+    sales_policy_data$Annualized.Premium,
+    0
+  )
+
+sales_policy_data$life.Net.Cash.Value <-
+  ifelse(
+    !is.na(sales_policy_data$Net.Cash.Value) &
+      sales_policy_data$Product.Line == "IND LIFE",
+    sales_policy_data$Net.Cash.Value,
+    0
+  )
+
+sales_policy_data$life.Coverage.Face.Amount <-
+  ifelse(
+    !is.na(sales_policy_data$Coverage.Face.Amount) &
+      sales_policy_data$Product.Line == "IND LIFE",
+    sales_policy_data$Coverage.Face.Amount,
+    0
+  )
+
+sales_policy_data$life.Account.Value <-
+  ifelse(
+    !is.na(sales_policy_data$Account.Value) &
+      sales_policy_data$Product.Line == "IND LIFE",
+    sales_policy_data$Account.Value,
+    0
+  )
+
+##############################################################
+#di#########
+sales_policy_data$di.Annualized.Premium <-
+  ifelse(
+    !is.na(sales_policy_data$Annualized.Premium) &
+      sales_policy_data$Product.Line == "IND DI",
+    sales_policy_data$Annualized.Premium,
+    0
+  )
+
+sales_policy_data$di.Net.Cash.Value <-
+  ifelse(
+    !is.na(sales_policy_data$Net.Cash.Value) &
+      sales_policy_data$Product.Line == "IND DI",
+    sales_policy_data$Net.Cash.Value,
+    0
+  )
+
+sales_policy_data$di.Coverage.Face.Amount <-
+  ifelse(
+    !is.na(sales_policy_data$Coverage.Face.Amount) &
+      sales_policy_data$Product.Line == "IND DI",
+    sales_policy_data$Coverage.Face.Amount,
+    0
+  )
+
+sales_policy_data$di.Account.Value <-
+  ifelse(
+    !is.na(sales_policy_data$Account.Value) &
+      sales_policy_data$Product.Line == "IND DI",
+    sales_policy_data$Account.Value,
+    0
+  )
+
+###############################################
+######Annuity#############################
+sales_policy_data$ann.Annualized.Premium <-
+  ifelse(
+    !is.na(sales_policy_data$Annualized.Premium) &
+      sales_policy_data$Product.Line == "IND ANNUITY",
+    sales_policy_data$Annualized.Premium,
+    0
+  )
+sales_policy_data$ann.Net.Cash.Value <-
+  ifelse(
+    !is.na(sales_policy_data$Net.Cash.Value) &
+      sales_policy_data$Product.Line == "IND ANNUITY",
+    sales_policy_data$Net.Cash.Value,
+    0
+  )
+
+sales_policy_data$ann.Coverage.Face.Amount <-
+  ifelse(
+    !is.na(sales_policy_data$Coverage.Face.Amount) &
+      sales_policy_data$Product.Line == "IND ANNUITY",
+    sales_policy_data$Coverage.Face.Amount,
+    0
+  )
+
+sales_policy_data$ann.Account.Value <-
+  ifelse(
+    !is.na(sales_policy_data$Account.Value) &
+      sales_policy_data$Product.Line == "IND ANNUITY",
+    sales_policy_data$Account.Value,
+    0
+  )
+
+################################3
+###########rp###############
+sales_policy_data$rp.Annualized.Premium <-
+  ifelse(
+    !is.na(sales_policy_data$Annualized.Premium) &
+      sales_policy_data$Product.Line == "RETIREMENT PLANS",
+    sales_policy_data$Annualized.Premium,
+    0
+  )
+
+sales_policy_data$rp.Net.Cash.Value <-
+  ifelse(
+    !is.na(sales_policy_data$Net.Cash.Value) &
+      sales_policy_data$Product.Line == "RETIREMENT PLANS",
+    sales_policy_data$Net.Cash.Value,
+    0
+  )
+
+sales_policy_data$rp.Coverage.Face.Amount <-
+  ifelse(
+    !is.na(sales_policy_data$Coverage.Face.Amount) &
+      sales_policy_data$Product.Line == "RETIREMENT PLANS",
+    sales_policy_data$Coverage.Face.Amount,
+    0
+  )
+
+sales_policy_data$rp.Account.Value <-
+  ifelse(
+    !is.na(sales_policy_data$Account.Value) &
+      sales_policy_data$Product.Line == "RETIREMENT PLANS",
+    sales_policy_data$Account.Value,
+    0
+  )
+
+##################################################################
+###Modify zipcode to create regions 0-9 region details is in url:
+####https://www.unitedstateszipcodes.org/images/zip-codes/zip-codes.png
+#######################################################################
+
+sales_policy_data$Client.zip.region <-
+  ifelse(
+    !is.na(sales_policy_data$Client.Zip.Code.5digit) &
+      nchar(sales_policy_data$Client.Zip.Code.5digit) >= 5,
+    substring(sales_policy_data$Client.Zip.Code.5digit, 1, 1),
+    0
+  )
+
+
+sales_policy_data$Client.zip.region <-
+  ifelse(
+    !is.na(sales_policy_data$Client.Zip.Code.5digit),
+    sales_policy_data$Client.zip.region,
+    NA
+  )
+
+################################AgeBins from 5 to 20 buckets#############################
+
+binning_function <- function(x)
+  {
+    x <- gsub(".*[,]([^]]+)[]].*", "\\1",x)
+    x <- as.numeric(x)
+    x <- as.character(cut(x, breaks = seq(10, 200, by = 20)))
+}
+
+age_bin_list <- c()
+test_bin <- sales_policy_data
+
+sales_policy_data$Owner.Age.Bin <- binning_function(sales_policy_data$Owner.Age.Bin)
+sales_policy_data$Agent.Age.Bin <- binning_function(sales_policy_data$Agent.Age.Bin)
+sales_policy_data$Agent.Tenure.Bin <- binning_function(sales_policy_data$Agent.Tenure.Bin)
+sales_policy_data$Policy.Tenure.Bin <- binning_function(sales_policy_data$Policy.Tenure.Bin)
+
+
+##################################################################
+dim(sales_policy_data)
+
+##drop the amount columns as we have already grouped them
+sales_policy_data <-
+  subset(
+    sales_policy_data,
+    select = -c(
+      Account.Value,
+      Coverage.Face.Amount,
+      Net.Cash.Value,
+      Annualized.Premium
+    )
+  )
+
+dim(sales_policy_data)
+
 
 
 ###list of unique ipins from response id table
 Ipinlist <- unique(survey_key$ANON.IPN)
 
+
+###filter data wrtipinlist
 sales_sur_1 <-  sales_policy_data[sales_policy_data$ANON.IPN %in% Ipinlist, ]
-##yes they do exist now separate them to single level
 
-####aggregation of duplicates into 1 row
-#aggregation function
-agg_fun <- function(x)
-{
-  x = paste(unique(x), collapse = ",")
-}
+###############################################################################################
+##one hot encode preprocessing##################
 
+###convert blank strings to NA
+
+sales_sur_1 <-
+  sales_sur_1 %>% mutate_if(is.character, funs(na_if(., "")))
+
+str(sales_policy_data)
+######################################
+#billing mode####
+#get top  billing modes with summarise and then change rest into other
+sales_sur_1 %>% group_by(Billing.Mode) %>% summarise(count = n()) %>% arrange()
+#we see summarise gives that direct bill eft and no bill have highest so lets change all other categories into other
+top_mode_list <- c("DIRECT BILL","EFT","NO BILL")
+sales_sur_1$Billing.Mode <- ifelse(sales_sur_1$Billing.Mode%in%top_mode_list, sales_sur_1$Billing.Mode,"OTHER")
+##we have only 4 categories now########
+
+#agent type grouping########
+#get top  billing modes with summarise and then change rest into other
+summary_ag_type <- as.data.frame(sales_sur_1 %>% group_by(Agent.Type) %>% summarise(count = n()) %>% arrange(desc(count)))
+#we see summarise gives that direct bill eft and no bill have highest so lets change all other categories into other
+rownames(summary_ag_type) <- NULL
+top_ag_list <- unlist(summary_ag_type[1:9,1])
+sales_sur_1$Agent.Type <- ifelse(sales_sur_1$Agent.Type%in%top_ag_list, sales_sur_1$Agent.Type,"OTHER")
+##we have 10 categories now########
+#confirm number with jennifer###
+
+
+columns_list <- c(
+  "Main.Agency.Distribution.Region",
+  "Agent.Type",
+  "Billing.Mode",
+  "Bill.Frequency",
+  "Product.Line",
+  "Product.Type",
+  "Insured.Underwriting.Tobacco.Code"
+)
+
+
+#####Perform One Hot Encoding Here#######
+sales_sur_2 <-
+  dummy_cols(
+    sales_sur_1,
+    select_columns = columns_list,
+    remove_first_dummy = TRUE
+  )
+
+str(sales_sur_2)
+##modify dummy into characters
+sales_sur_2 <- sales_sur_2 %>%
+  mutate_if(is.integer,as.character)
+
+str(sales_sur_2)
+dim(sales_sur_2)
+###########################################################################3
 
 #groupby to unique level
 #mutate by applying fun2 function
@@ -211,15 +461,31 @@ agg_fun <- function(x)
 # for better understanding of the code 
 # add filter(n() == 8) %>% in between group by and 
 #mutate function
-repeatedipindata <-
-  sales_sur_1 %>%
+
+####aggregation of duplicates into 1 row
+#aggregation function
+agg_fun <- function(x)
+{
+  x = paste(sort(unique(x)), collapse = ",")
+}
+
+agg_fun2 <- function(x)
+{
+  x = sum(unique(x))
+}
+str(sales_sur_2)
+
+ repeatedipindata <-
+  sales_sur_2 %>%
   group_by(ANON.Contract,ANON.IPN) %>%
-  mutate_all(agg_fun)
-
-
-
-
-
+  mutate_if(is.character,agg_fun)
+x <- paste(sort(unique(sales_sur_2$Coverage.Status...ACORD.Name)), collapse = ",")
+ 
+ repeatedipindata <-
+   repeatedipindata %>%
+   group_by(ANON.Contract,ANON.IPN) %>%
+   mutate_if(is.numeric,agg_fun2)
+ 
 #remove duplicates generated
 sales_sur_merge_ready <- repeatedipindata[!duplicated(repeatedipindata), ]
 
@@ -248,12 +514,18 @@ survey_key_no_amounts <-
                                 "Coverage.Face.Amount",
                                 "Same.OI")]
 
-
 #group by and aggregating to response id level
 unique_level_Rid_dup <- 
   survey_key_no_amounts %>%
   group_by(ResponseId) %>%
-  mutate_all(agg_fun)
+  mutate_if(is.character,agg_fun)
+
+
+unique_level_Rid_dup <-
+  unique_level_Rid_dup %>%
+  group_by(ResponseId) %>%
+  mutate_if(is.numeric,agg_fun2)
+
 
 #remove dups
 unique_level_Rid <- unique_level_Rid_dup[!duplicated(unique_level_Rid_dup), ]
@@ -261,7 +533,7 @@ unique_level_Rid <- unique_level_Rid_dup[!duplicated(unique_level_Rid_dup), ]
 survey_data_final <- survey_data_final[,!names(survey_data_final) %in% c("ANON.IPN","ANON.Contract")]
 
 ###########################################################################
-############## combine sales data and survey data #########################
+############## combine sales data and survey data(Dharahas Code) #########################
 ######## Input files: Survey and email list   Output_file: Final_data #####
 ###########################################################################
 
