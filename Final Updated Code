@@ -1,6 +1,7 @@
 #install.packages('boxr')
 library(boxr)
 library(dplyr)
+library(plyr)
 library(memisc)
 library(stringr)
 library(tidyr)
@@ -10,6 +11,7 @@ library(caret)
 library(randomForest)
 library(GGally)
 library(corrplot)
+library(data.table)
 #install below packages
 library(qdap)
 library(mltools)
@@ -169,7 +171,6 @@ d6 <- left_join(d3, d5, by =  "ANON.Contract")
 d6 <- d6[,!names(d6) %in% c("RP.y","IND.y","ANON.IPN.y")]
 
 #Changing names of the columns for uniformity
-library(data.table)
 setnames(d6, old=c("RP.x","IND.x","ANON.IPN.x"), new=c("RP", "IND", "ANON.IPN"))
 
 #Adding 2 missing columns not present in the email and the old survey data
@@ -191,12 +192,13 @@ survey_data_final_missing_which <- survey_data_final[survey_data_final$ANON.Cont
 ###########################################################################
 ###Dharahas Code##########
 
-
+unique(sales_policy_data$Product.Line)
 
 
 ##code on 4/7/2019# changing amount columns by splitting to di an and life
 #life policy amount coulumns####
 ##to be changed later to a better code format###
+
 sales_policy_data$life.Annualized.Premium <-
   ifelse(
     !is.na(sales_policy_data$Annualized.Premium) &
@@ -272,6 +274,7 @@ sales_policy_data$ann.Annualized.Premium <-
     sales_policy_data$Annualized.Premium,
     0
   )
+
 sales_policy_data$ann.Net.Cash.Value <-
   ifelse(
     !is.na(sales_policy_data$Net.Cash.Value) &
@@ -314,6 +317,7 @@ sales_policy_data$rp.Net.Cash.Value <-
     0
   )
 
+
 sales_policy_data$rp.Coverage.Face.Amount <-
   ifelse(
     !is.na(sales_policy_data$Coverage.Face.Amount) &
@@ -351,13 +355,15 @@ sales_policy_data$Client.zip.region <-
     NA
   )
 
+unique(sales_policy_data$Client.zip.region)
+
 ################################AgeBins from 5 to 20 buckets#############################
 
 binning_function <- function(x)
-  {
-    x <- gsub(".*[,]([^]]+)[]].*", "\\1",x)
-    x <- as.numeric(x)
-    x <- as.character(cut(x, breaks = seq(10, 200, by = 20)))
+{
+  x <- gsub(".*[,]([^]]+)[]].*", "\\1",x)
+  x <- as.numeric(x)
+  x <- as.character(cut(x, breaks = seq(10, 200, by = 20)))
 }
 
 age_bin_list <- c()
@@ -372,7 +378,7 @@ sales_policy_data$Policy.Tenure.Bin <- binning_function(sales_policy_data$Policy
 ##################################################################
 dim(sales_policy_data)
 
-##drop the amount columns as we have already grouped them
+##drop the amount and zip code columns as we have already grouped them
 sales_policy_data <-
   subset(
     sales_policy_data,
@@ -380,7 +386,8 @@ sales_policy_data <-
       Account.Value,
       Coverage.Face.Amount,
       Net.Cash.Value,
-      Annualized.Premium
+      Annualized.Premium,
+      Client.Zip.Code.5digit
     )
   )
 
@@ -407,15 +414,16 @@ str(sales_policy_data)
 ######################################
 #billing mode####
 #get top  billing modes with summarise and then change rest into other
-sales_sur_1 %>% group_by(Billing.Mode) %>% summarise(count = n()) %>% arrange()
+x<- sales_sur_1 %>% dplyr::group_by(Billing.Mode) %>% dplyr::summarise(count = n()) %>% dplyr::arrange()
 #we see summarise gives that direct bill eft and no bill have highest so lets change all other categories into other
-top_mode_list <- c("DIRECT BILL","EFT","NO BILL")
+top_mode_list <- c("DIRECT BILL","EFT","NO BILL","LIST BILL")
 sales_sur_1$Billing.Mode <- ifelse(sales_sur_1$Billing.Mode%in%top_mode_list, sales_sur_1$Billing.Mode,"OTHER")
-##we have only 4 categories now########
+##we have only 5 categories now########
+unique(sales_sur_1$Billing.Mode)
 
 #agent type grouping########
 #get top  billing modes with summarise and then change rest into other
-summary_ag_type <- as.data.frame(sales_sur_1 %>% group_by(Agent.Type) %>% summarise(count = n()) %>% arrange(desc(count)))
+summary_ag_type <- as.data.frame(sales_sur_1 %>% dplyr::group_by(Agent.Type) %>% dplyr::summarise(count = n()) %>% dplyr::arrange(desc(count)))
 #we see summarise gives that direct bill eft and no bill have highest so lets change all other categories into other
 rownames(summary_ag_type) <- NULL
 top_ag_list <- unlist(summary_ag_type[1:9,1])
@@ -444,11 +452,7 @@ sales_sur_2 <-
   )
 
 str(sales_sur_2)
-##modify dummy into characters
-sales_sur_2 <- sales_sur_2 %>%
-  mutate_if(is.integer,as.character)
 
-str(sales_sur_2)
 dim(sales_sur_2)
 ###########################################################################3
 
@@ -473,26 +477,45 @@ agg_fun2 <- function(x)
 {
   x = sum(unique(x))
 }
-str(sales_sur_2)
 
- repeatedipindata <-
+
+agg_fun3 <- function(x)
+{
+  x = max(unique(x))
+}
+
+
+
+
+sales_sur_2 <- sales_sur_2 %>% mutate_if(is.character,as.factor)
+sales_sur_2 <- sales_sur_2 %>% mutate_if(is.factor,as.character)
+unique(sales_sur_2$Agent.Tenure.Bin)
+
+repeatedipindata <-
   sales_sur_2 %>%
   group_by(ANON.Contract,ANON.IPN) %>%
   mutate_if(is.character,agg_fun)
 x <- paste(sort(unique(sales_sur_2$Coverage.Status...ACORD.Name)), collapse = ",")
- 
- repeatedipindata <-
-   repeatedipindata %>%
-   group_by(ANON.Contract,ANON.IPN) %>%
-   mutate_if(is.numeric,agg_fun2)
- 
+
+repeatedipindata <-
+  repeatedipindata %>%
+  group_by(ANON.Contract,ANON.IPN) %>%
+  mutate_if(is.numeric,agg_fun2)
+
+repeatedipindata <-
+  repeatedipindata %>%
+  group_by(ANON.Contract,ANON.IPN) %>%
+  mutate_if(is.integer,agg_fun3)
+
+
+
 #remove duplicates generated
 sales_sur_merge_ready <- repeatedipindata[!duplicated(repeatedipindata), ]
 
 #merge with survey key 
 check2 <- merge(survey_key, sales_sur_merge_ready, by=c("ANON.IPN","ANON.Contract"))
 
-
+str(survey_key)
 length(unique(check2$ResponseId))
 ##6854 observations are found right now which are unique
 
@@ -502,9 +525,19 @@ lol <- survey_key %>% filter(!(ResponseId %in% check2$ResponseId))
 
 ######################new code 25/03##########################
 
+check2 <- check2 %>% mutate_if(is.character, funs(gsub(",NA","",.)))
+check2 <- check2 %>% mutate_if(is.character, funs(gsub("NA,","",.)))
+
+
+
+
 #convert character "NAs" into actual N/a
 check2 <-
   check2 %>% mutate_if(is.character, funs(na_if(., "NA")))
+
+check2 <-
+  check2 %>% mutate_if(is.character, funs(na_if(., "")))
+
 
 #remove amount columns and same.OI which is unnecessary
 survey_key_no_amounts <-
@@ -513,6 +546,7 @@ survey_key_no_amounts <-
                                 "Net.Cash.Value",
                                 "Coverage.Face.Amount",
                                 "Same.OI")]
+
 
 #group by and aggregating to response id level
 unique_level_Rid_dup <- 
@@ -527,10 +561,22 @@ unique_level_Rid_dup <-
   mutate_if(is.numeric,agg_fun2)
 
 
+unique_level_Rid_dup <-
+  unique_level_Rid_dup %>%
+  group_by(ResponseId) %>%
+  mutate_if(is.integer,agg_fun3)
+
+
+
+
+
 #remove dups
 unique_level_Rid <- unique_level_Rid_dup[!duplicated(unique_level_Rid_dup), ]
 #remove same repeated columns from sales final data
 survey_data_final <- survey_data_final[,!names(survey_data_final) %in% c("ANON.IPN","ANON.Contract")]
+
+unique_level_Rid <- unique_level_Rid %>% mutate_if(is.integer,as.character)
+
 
 ###########################################################################
 ############## combine sales data and survey data(Dharahas Code) #########################
@@ -542,6 +588,7 @@ final_merge_data_set <- merge(unique_level_Rid,survey_data_final,by = "ResponseI
 
 #change NA's appended into blank string ##hapens for zipcode of client alone as it has NA value
 final_merge_data_set <- final_merge_data_set %>% mutate_if(is.character, funs(gsub(",NA","",.)))
+final_merge_data_set <- final_merge_data_set %>% mutate_if(is.character, funs(gsub("NA,","",.)))
 
 Final_data<-final_merge_data_set
 
@@ -550,6 +597,44 @@ View(Final_data)
 str(Final_data)
 dim(Final_data)
 
+
+##drop the columns we encoded
+
+Final_data$Main.Agency.State <-substring(Final_data$Main.Agency.State, 1, 2)
+
+Final_data1 <-
+  subset(
+    Final_data,
+    select = -c(
+      Main.Agency.Distribution.Region,
+      Agent.Type,
+      Billing.Mode,
+      Bill.Frequency,
+      Product.Line,
+      Product.Type,
+      Insured.Underwriting.Tobacco.Code,
+      Coverage.Status...ACORD.Name,
+      Policy.Client.Role.Type,
+      StartDate,
+      EndDate,
+      Progress,
+      Finished,
+      RecordedDate,
+      ResponseId,
+      DistributionChannel,
+      UserLanguage,
+      Q_URL,
+      LAST_LOGIN_DATE,
+      RP_COUNT_POLICY,
+      Insured.Gender,
+      Insured.Issue.Age.Bin,
+      IND_COUNT_POLICY,
+      IND_COUNT_IPN
+    )
+  )
+
+dim(Final_data1)
+names(Final_data1)
 
 ################ Exploratory Data Analysis ################################
 
@@ -707,39 +792,50 @@ fin_drivers<-cbind(prom,det,neu)
 
 require(randomForest)
 
-#Columns needed for analysis
-list_col<-c("Q1","Q1_NPS_GROUP","Q4_1","Q10_1","Q6_1","Q7","Q3_Relationship","Q3_Tech","Q3_Product","Q3_Service","Q3_Ethics","Q3_Communication","Q3_Ease","Q3_Company","Q3_HO_Service","Q3_Performance_Fee", "Q7_Service","Q7_Product","Q7_Price","Q7_Communication","Q7_Resources","Q7_Administration","Q7_Relationship","Q7_Technology","RP","RP_COUNT_POLICY","RP_COUNT_PLAN","IND","Life.Policies","DI.Policies","AN.Policies","IND_COUNT_POLICY","IND_COUNT_PLAN","IND_COUNT_IPN","Entity")
+#Columns excluded for analysis
+list_col<-c("ResponseId",	"ANON.IPN",	"ANON.Contract",	"ANON.Agency",	"ANON.AgentID", "Q1","Duration (in seconds)","Q4_1","Q10_1","Q6_1","Q7","Q8","Q3_Masked","Q8 - Topics","Client.Country","Q3_Relationship","Q3_Tech","Q3_Product","Q3_Service","Q3_Ethics","Q3_Communication","Q3_Ease","Q3_Company","Q3_HO_Service","Q3_Performance_Fee", "Q7_Service","Q7_Product","Q7_Price","Q7_Communication","Q7_Resources","Q7_Administration","Q7_Relationship","Q7_Technology")
 
 #Check data types for selected columns
-str(survey_data_final[, (names(survey_data_final) %in% list_col)])
+str(Final_data1[, !(names(Final_data1) %in% list_col)])
 
 ## Note: Check if your dependent var has missing values or nulls
 #Remove missing rows of dependent column
-survey_data_final1<-survey_data_final1[!survey_data_final1$Q1_NPS_GROUP=="",]
+Final_data1<-Final_data1[!Final_data1$Q1_NPS_GROUP=="",]
 
 #Final data needed for random forest
-rfdata<-survey_data_final1[,(names(survey_data_final1) %in% list_col)]
+rfdata<-Final_data1[,!(names(Final_data1) %in% list_col)]
 
 ## Note: Below step is data manipulation and needs to be done as per the data requirement
 # Replace X in certain columns with 1's and replace NA's with 0
 
-LISTT<-c("Q3_Relationship","Q3_Tech","Q3_Product","Q3_Service","Q3_Ethics","Q3_Communication","Q3_Ease","Q3_Company","Q3_HO_Service","Q3_Performance_Fee", "Q7_Service","Q7_Product","Q7_Price","Q7_Communication","Q7_Resources","Q7_Administration","Q7_Relationship","Q7_Technology")
-rfdata[,names(rfdata) %in% LISTT]<- rfdata[,names(rfdata) %in% LISTT] %>% dplyr::mutate_all(function(x)ifelse(x=="X",1,0))
+#LISTT<-c("Q3_Relationship","Q3_Tech","Q3_Product","Q3_Service","Q3_Ethics","Q3_Communication","Q3_Ease","Q3_Company","Q3_HO_Service","Q3_Performance_Fee", "Q7_Service","Q7_Product","Q7_Price","Q7_Communication","Q7_Resources","Q7_Administration","Q7_Relationship","Q7_Technology")
+#rfdata[,names(rfdata) %in% LISTT]<- rfdata[,names(rfdata) %in% LISTT] %>% dplyr::mutate_all(function(x)ifelse(x=="X",1,0))
+
 rfdata2<-rfdata %>% mutate_all(function(x) ifelse(x%in%NA, 0,x))
-str(rfdata2)
+rfdata2$RP_COUNT_PLAN<-ifelse(rfdata2$RP=="N",0,rfdata2$RP_COUNT_PLAN)
+
+table(rfdata2$RP_COUNT_PLAN,rfdata2$RP)
+unique(rfdata2$RP_COUNT_PLAN)
 
 ##Here everything needs to be either INT or Factor 
 
 #Convert character columns to factors
-col_names <- c("Q7","Q1_NPS_GROUP","Q3_Relationship","Q3_Tech","Q3_Product","Q3_Service","Q3_Ethics","Q3_Communication","Q3_Ease","Q3_Company","Q3_HO_Service","Q3_Performance_Fee", "Q7_Service","Q7_Product","Q7_Price","Q7_Communication","Q7_Resources","Q7_Administration","Q7_Relationship","Q7_Technology","RP","RP_COUNT_POLICY","RP_COUNT_PLAN","IND","Entity")
-rfdata2[,col_names] <- lapply(rfdata2[,col_names] , factor)
+rfdata2$Entity<-ifelse(rfdata2$Entity=="","FALSE",rfdata2$Entity)
+table(rfdata2$Entity)
+
+library(dplyr)
+rfdata2=rfdata2 %>% mutate_if(is.character, as.factor)
 
 str(rfdata2)
 dim(rfdata2)
 
+names(rfdata2) <- make.names(names(rfdata2), unique=TRUE)
+sum(is.na(rfdata2))
+
+
 #Fitting Random forest
 ##Note: Please remove any fields that are overly dependent sometimes it might not help 
-survey.rf=randomForest(Q1_NPS_GROUP ~ . , data = rfdata2[,!names(rfdata2) %in% c("Q1")], na.action=na.omit)
+survey.rf=randomForest(Q1_NPS_GROUP ~ . , data = rfdata2[,], na.action=na.omit)
 survey.rf
 
 #Tally rf result with the actuals
@@ -754,3 +850,48 @@ varImpPlot(survey.rf,sort = T, n.var=10, main="Top 10 - Variable Importance")
 
 #Variable Importance
 var.imp = data.frame(importance(survey.rf,type=2))
+
+####Now, detractors vs others
+
+rfdata2$Q1_NPS_MODIFIED<-ifelse(rfdata2$Q1_NPS_GROUP=="Detractor","1","0")
+str(rfdata2)
+rfdata2=rfdata2 %>% mutate_if(is.character, as.factor)
+
+set.seed(123)
+## 75% of the sample size
+smp_size <- floor(0.75 * nrow(rfdata2))
+
+train_ind <- sample(seq_len(nrow(rfdata2)), size = smp_size)
+
+train <- rfdata2[train_ind, ]
+test <- rfdata2[-train_ind, ]
+
+
+#Fitting Random forest
+##Note: Please remove any fields that are overly dependent sometimes it might not help 
+survey.rf2=randomForest(Q1_NPS_MODIFIED ~ . , data = train[,!names(train) %in% c("Q1_NPS_GROUP")], na.action=na.omit)
+survey.rf2
+
+
+#For Classification problem - errors in each class and Black line- OOB error
+plot(survey.rf2)
+
+#Plot for variable importance
+library(caret)
+varImpPlot(survey.rf2,sort = T, n.var=10, main="Top 10 - Variable Importance for Detractor (1) and others (0)")
+
+#Variable Importance
+var.imp2 = data.frame(importance(survey.rf2,type=2))
+
+#out of sample prediction
+pred_test<-predict(survey.rf2, test, type="class")
+table(test$Q1_NPS_MODIFIED, pred_test, dnn=c("Truth","Predicted"))
+
+test<-test %>% mutate_if(is.factor, as.numeric)
+pred_test<-pred_test %>% mutate_if(is.factor, as.numeric)
+pred_test<- as.data.frame(pred_test)
+
+act_test <-as.data.frame()
+
+#MSPE
+mean((test$Q1_NPS_MODIFIED-(pred_test-1))^2)
