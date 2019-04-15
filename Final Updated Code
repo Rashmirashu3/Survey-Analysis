@@ -192,6 +192,11 @@ survey_data_final_missing_which <- survey_data_final[survey_data_final$ANON.Cont
 ###########################################################################
 ###Dharahas Code##########
 
+##merge add home agency
+home_agency<- box_search("Home Agencies by Agent.csv") %>% box_read()
+#read new data 
+sales_policy_data <- sales_policy_data%>%merge(home_agency,by = "ANON.AgentID")
+length(setdiff(sales_data_home$ANON.AgentID,sales_policy_data$ANON.AgentID))
 unique(sales_policy_data$Product.Line)
 
 
@@ -354,8 +359,16 @@ sales_policy_data$Client.zip.region <-
     sales_policy_data$Client.zip.region,
     NA
   )
-
 unique(sales_policy_data$Client.zip.region)
+
+sales_policy_data$Coverage.Status.code <-
+  ifelse(
+    !is.na(sales_policy_data$Coverage.Status...ACORD.Name) &
+      sales_policy_data$Coverage.Status...ACORD.Name == "INFORCE",
+    1,
+    0
+  )
+
 
 ################################AgeBins from 5 to 20 buckets#############################
 
@@ -568,8 +581,6 @@ unique_level_Rid_dup <-
 
 
 
-
-
 #remove dups
 unique_level_Rid <- unique_level_Rid_dup[!duplicated(unique_level_Rid_dup), ]
 #remove same repeated columns from sales final data
@@ -579,7 +590,7 @@ unique_level_Rid <- unique_level_Rid %>% mutate_if(is.integer,as.character)
 
 
 ###########################################################################
-############## combine sales data and survey data(Dharahas Code) #########################
+############## combine sales data and survey data(Dharahas Code) ##########
 ######## Input files: Survey and email list   Output_file: Final_data #####
 ###########################################################################
 
@@ -597,16 +608,57 @@ View(Final_data)
 str(Final_data)
 dim(Final_data)
 
+#change policy client role type to owner,payor,owner payor
+for ( i in 1:nrow(Final_data))
+{
+  row <- Final_data[i,]
+  if(grepl("owner",tolower(row$Policy.Client.Role.Type)))
+  {
+    if(grepl("payor",tolower(row$Policy.Client.Role.Type)))
+    {
+      Final_data[i,]$Policy.Client.Role.Type = "Payor Owner"
+    }
+    else
+    {
+      Final_data[i,]$Policy.Client.Role.Type = "Owner"
+    }
+  }
+  else if(grepl("payor",tolower(row$Policy.Client.Role.Type)))
+  {
+    Final_data[i,]$Policy.Client.Role.Type = "Payor"
+  }
+  else
+  {
+    Final_data[i,]$Policy.Client.Role.Type = "Other"
+  }
+  Final_data[i,]$Owner.Age.Bin <- Final_data[i,]$Owner.Age.Bin %>% str_match_all("[0-9]+") %>% unlist %>% as.numeric %>% max()
+  Final_data[i,]$Agent.Age.Bin <- Final_data[i,]$Agent.Age.Bin %>% str_match_all("[0-9]+") %>% unlist %>% as.numeric %>% max()
+  Final_data[i,]$Agent.Tenure.Bin  <- Final_data[i,]$Agent.Tenure.Bin %>% str_match_all("[0-9]+") %>% unlist %>% as.numeric %>% max()
+  Final_data[i,]$Policy.Tenure.Bin <- Final_data[i,]$Policy.Tenure.Bin %>% str_match_all("[0-9]+") %>% unlist %>% as.numeric %>% max()
+  
+  Final_data[i,]$Home.Agency.State <- gsub( ",.*$", "", Final_data[i,]$Home.Agency.State )
+  }
+Final_data$Owner.Age.Bin <- binning_function(Final_data$Owner.Age.Bin)
+Final_data$Agent.Age.Bin <- binning_function(Final_data$Agent.Age.Bin)
+Final_data$Agent.Tenure.Bin <- binning_function(Final_data$Agent.Tenure.Bin)
+Final_data$Policy.Tenure.Bin <- binning_function(Final_data$Policy.Tenure.Bin)
+
+
 
 ##drop the columns we encoded
-
 Final_data$Main.Agency.State <-substring(Final_data$Main.Agency.State, 1, 2)
+Final_data$Home.Agency.State <-substring(Final_data$Home.Agency.State, 1, 2)
+Final_data$Client.zip.region <-substring(Final_data$Client.zip.region, 1, 1)
 
-Final_data1 <-
-  subset(
+table(Final_data$Home.Agency.State)
+
+write.csv(Final_data,'C:/Users/Rashu/Desktop/Class notes/Sem 2/flex 1/Grad case studies/Class reports/fin.csv')
+
+Final_data1<-  subset(
     Final_data,
     select = -c(
       Main.Agency.Distribution.Region,
+      Main.Agency.State,
       Agent.Type,
       Billing.Mode,
       Bill.Frequency,
@@ -614,7 +666,6 @@ Final_data1 <-
       Product.Type,
       Insured.Underwriting.Tobacco.Code,
       Coverage.Status...ACORD.Name,
-      Policy.Client.Role.Type,
       StartDate,
       EndDate,
       Progress,
@@ -629,12 +680,21 @@ Final_data1 <-
       Insured.Gender,
       Insured.Issue.Age.Bin,
       IND_COUNT_POLICY,
-      IND_COUNT_IPN
+      IND_COUNT_IPN,
+      Client.Country
     )
   )
 
+table(Final_data1$Main.Agency.State)
+table(Final_data1$Home.Agency.State)
+
 dim(Final_data1)
 names(Final_data1)
+
+table(Final_data1$Policy.Client.Role.Type)
+
+
+write.csv(Final_data1,'C:/Users/Rashu/Desktop/Class notes/Sem 2/flex 1/Grad case studies/Class reports/finallll.csv')
 
 ################ Exploratory Data Analysis ################################
 
@@ -853,12 +913,15 @@ var.imp = data.frame(importance(survey.rf,type=2))
 
 ####Now, detractors vs others
 
+
 rfdata2$Q1_NPS_MODIFIED<-ifelse(rfdata2$Q1_NPS_GROUP=="Detractor","1","0")
 str(rfdata2)
-rfdata2=rfdata2 %>% mutate_if(is.character, as.factor)
+rfdata2=rfdata2 %>% dplyr::mutate_if(is.character, as.factor)
 
-set.seed(123)
+
+set.seed(123456)
 ## 75% of the sample size
+
 smp_size <- floor(0.75 * nrow(rfdata2))
 
 train_ind <- sample(seq_len(nrow(rfdata2)), size = smp_size)
@@ -879,19 +942,238 @@ plot(survey.rf2)
 #Plot for variable importance
 library(caret)
 varImpPlot(survey.rf2,sort = T, n.var=10, main="Top 10 - Variable Importance for Detractor (1) and others (0)")
+table(Final_data$Product.Type)
 
 #Variable Importance
 var.imp2 = data.frame(importance(survey.rf2,type=2))
 
+write.csv(var.imp2, "C:/Users/Rashu/Desktop/Class notes/Sem 2/flex 1/Grad case studies/rfdet.csv")
+
+#In sample prediction
+
+pred_train<-predict(survey.rf2, train, type="class")
+a<-as.numeric(train$Q1_NPS_MODIFIED)
+b<-as.numeric(pred_train)
+
+#MSE
+mean((a-b)^2)
+
 #out of sample prediction
+
 pred_test<-predict(survey.rf2, test, type="class")
-table(test$Q1_NPS_MODIFIED, pred_test, dnn=c("Truth","Predicted"))
-
-test<-test %>% mutate_if(is.factor, as.numeric)
-pred_test<-pred_test %>% mutate_if(is.factor, as.numeric)
-pred_test<- as.data.frame(pred_test)
-
-act_test <-as.data.frame()
+X<-as.numeric(test$Q1_NPS_MODIFIED)
+Y<-as.numeric(pred_test)
 
 #MSPE
-mean((test$Q1_NPS_MODIFIED-(pred_test-1))^2)
+mean((X-Y)^2)
+
+#####################################################################################
+################         ORDINAL LOGISTIC REGRESSION        #########################
+#####################################################################################
+
+######### CV
+rfdata2 <- rfdata2[,!names(rfdata2) %in% ("IND")]
+str(rfdata2)
+
+require(caret)
+
+classes <- rfdata2[, "Q1_NPS_GROUP"]
+predictors <- rfdata2[, -match(c("Q1_NPS_GROUP"), colnames(rfdata2))]
+
+train_set <- createDataPartition(classes, p = 0.8, list = FALSE)
+str(train_set)
+
+
+train_predictors <- predictors[train_set, ]
+train_classes <- classes[train_set]
+test_predictors <- predictors[-train_set, ]
+test_classes <- classes[-train_set]
+
+set.seed(2019)
+
+cv_splits <- createFolds(classes, k = 10, returnTrain = TRUE)
+str(cv_splits)
+
+
+library(nnet)
+set.seed(2019)
+
+
+rfdata2_train <- rfdata2[train_set, ]
+rfdata2_test <- rfdata2[-train_set, ]
+
+glmnet_grid <- expand.grid(alpha = c(0,  .1,  .2, .4, .6, .8, 1),
+                           lambda = seq(.01, .2, length = 20))
+
+glmnet_ctrl <- trainControl(method = "cv", number = 10)
+
+glmnet_fit <- train(Q1_NPS_GROUP ~ ., data = rfdata2_train,
+                    method = "multinom",
+                    preProcess = c("center", "scale"),
+                    tuneGrid = glmnet_grid,
+                    trControl = glmnet_ctrl)
+
+glmnet_fit
+
+
+mul_model <- multinom(train$Q1_NPS_GROUP ~ .,data = train)
+summary(mul_model)
+
+#### CV train dataset
+
+install.packages("Metrics")
+library(Metrics)
+
+# repeat cross validate by iterating through all the data to give every variable a chance of being test and train portions
+totalError <- c()
+totalError2 <- c()
+totalAccuracy  <- c()
+
+cv <- 10
+maxiterations <- 500 # try it again with a lower value and notice the mean error
+cvDivider <- floor(nrow(rfdata2) / (cv+1))
+
+for (cv in seq(1:cv)) {
+  # assign chunk to data test
+  dataTestIndex <- c((cv * cvDivider):(cv * cvDivider + cvDivider))
+  dataTest <- rfdata2[dataTestIndex,]
+  # everything else to train
+  dataTrain <- rfdata2[-dataTestIndex,]
+  
+  cylModel <- multinom(Q1_NPS_GROUP~., data=dataTrain, maxit=maxiterations, trace=T) 
+  
+  pred <- predict(cylModel, dataTest)
+  pred_train <-predict(cylModel, dataTrain)
+  
+  #  classification error
+  err <- ce(as.numeric(dataTest$Q1_NPS_GROUP), as.numeric(pred))
+  totalError <- c(totalError, err)
+  
+  err2 <- ce(as.numeric(dataTrain$Q1_NPS_GROUP), as.numeric(pred_train))
+  totalError2 <- c(totalError2, err2)
+  
+  #  classification error
+  cv_ac <- postResample(dataTest$Q1_NPS_GROUP, pred)[[1]]
+  print(paste('Current Accuracy:',cv_ac,'for CV:',cv))
+  totalAccuracy <- c(totalAccuracy, cv_ac)
+  
+}
+
+print(paste('MSPE of all repeated cross validations:',mean(totalError)))
+print(paste('Mean error of all repeated cross validations:',mean(totalError2)))
+print(paste('Mean Accuracy:',mean(totalAccuracy)))
+
+
+######### Survey text analysis ###############
+
+install.packages("textmineR")
+library(textmineR)
+
+# load survey data set from textmineR
+str(survey_data)
+
+# create a document term matrix 
+dtm <- CreateDtm(doc_vec = survey_data$Q3_Masked, # character vector of documents
+                 doc_names = survey_data$ResponseId, # document names
+                 ngram_window = c(1, 2), # minimum and maximum n-gram length
+                 stopword_vec = c(stopwords::stopwords("en"), # stopwords from tm
+                                  stopwords::stopwords(source = "smart")), # this is the default value
+                 lower = TRUE, # lowercase - this is the default value
+                 remove_punctuation = TRUE, # punctuation - this is the default
+                 remove_numbers = TRUE, # numbers - this is the default
+                 verbose = FALSE, # Turn off status bar for this demo
+                 cpus = 2) # default is all available cpus on the system
+
+dtm <- dtm[,colSums(dtm) > 2]
+
+# Fit a Latent Dirichlet Allocation model
+# note the number of topics is arbitrary here
+# see extensions for more info
+
+set.seed(12345)
+
+model <- FitLdaModel(dtm = dtm, 
+                     k = 20,
+                     iterations = 200, # I usually recommend at least 500 iterations or more
+                     burnin = 180,
+                     alpha = 0.1,
+                     beta = 0.05,
+                     optimize_alpha = TRUE,
+                     calc_likelihood = TRUE,
+                     calc_coherence = TRUE,
+                     calc_r2 = TRUE,
+                     cpus = 2) 
+# R-squared 
+# - only works for probabilistic models like LDA and CTM
+model$r2
+#> [1] 0.2747765
+
+# log Likelihood (does not consider the prior) 
+
+plot(model$log_likelihood, type = "l")
+
+# probabilistic coherence, a measure of topic quality
+# this measure can be used with any topic model, not just probabilistic ones
+summary(model$coherence)
+#>    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+#>  0.0060  0.1188  0.1543  0.1787  0.2187  0.4117
+
+hist(model$coherence, 
+     col= "blue", 
+     main = "Histogram of probabilistic coherence")
+
+# Get the top terms of each topic
+model$top_terms <- GetTopTerms(phi = model$phi, M = 5)
+head(t(model$top_terms))
+
+# Get the prevalence of each topic
+# You can make this discrete by applying a threshold, say 0.05, for
+# topics in/out of docuemnts. 
+model$prevalence <- colSums(model$theta) / sum(model$theta) * 100
+
+# prevalence should be proportional to alpha
+plot(model$prevalence, model$alpha, xlab = "prevalence", ylab = "alpha")     
+
+
+# textmineR has a naive topic labeling tool based on probable bigrams
+model$labels <- LabelTopics(assignments = model$theta > 0.05, 
+                            dtm = dtm,
+                            M = 1)
+
+head(model$labels)
+#>     label_1                      
+#> t_1 "radiation_necrosis"         
+#> t_2 "kda_fragment"               
+#> t_3 "cardiovascular_disease"     
+#> t_4 "mast_cell"                  
+#> t_5 "radiation_necrosis"         
+#> t_6 "laparoscopic_fundoplication"
+
+# put them together, with coherence into a summary table
+model$summary <- data.frame(topic = rownames(model$phi),
+                            label = model$labels,
+                            coherence = round(model$coherence, 3),
+                            prevalence = round(model$prevalence,3),
+                            top_terms = apply(model$top_terms, 2, function(x){
+                              paste(x, collapse = ", ")
+                            }),
+                            stringsAsFactors = FALSE)
+model$summary[ order(model$summary$prevalence, decreasing = TRUE) , ][ 1:10 , ]
+
+
+# predictions with gibbs
+assignments <- predict(model, dtm,
+                       method = "gibbs", 
+                       iterations = 200,
+                       burnin = 180,
+                       cpus = 2)
+# predictions with dot
+assignments_dot <- predict(model, dtm,
+                           method = "dot")
+
+
+# compare
+barplot(rbind(assignments[10,], assignments_dot[10,]),
+        col = c("red", "blue"), las = 2, beside = TRUE)
+legend("topright", legend = c("gibbs", "dot"), col = c("red", "blue"), 
+       fill = c("red", "blue"))
