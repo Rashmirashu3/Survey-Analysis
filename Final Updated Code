@@ -370,13 +370,13 @@ sales_policy_data$Coverage.Status.code <-
   )
 
 
-################################AgeBins from 5 to 20 buckets#############################
+################################AgeBins from 5 to 10 buckets#############################
 
 binning_function <- function(x)
 {
   x <- gsub(".*[,]([^]]+)[]].*", "\\1",x)
   x <- as.numeric(x)
-  x <- as.character(cut(x, breaks = seq(10, 200, by = 20)))
+  x <- as.character(cut(x, breaks = seq(10, 200, by = 10)))
 }
 
 age_bin_list <- c()
@@ -534,7 +534,7 @@ length(unique(check2$ResponseId))
 
 #extract that one response id where that combination does not exist
 lol <- survey_key %>% filter(!(ResponseId %in% check2$ResponseId))
-##findout from kelly :O
+##findout from kelly
 
 ######################new code 25/03##########################
 
@@ -652,7 +652,6 @@ Final_data$Client.zip.region <-substring(Final_data$Client.zip.region, 1, 1)
 
 table(Final_data$Home.Agency.State)
 
-write.csv(Final_data,'C:/Users/Rashu/Desktop/Class notes/Sem 2/flex 1/Grad case studies/Class reports/fin.csv')
 
 Final_data1<-  subset(
     Final_data,
@@ -693,115 +692,6 @@ names(Final_data1)
 
 table(Final_data1$Policy.Client.Role.Type)
 
-
-write.csv(Final_data1,'C:/Users/Rashu/Desktop/Class notes/Sem 2/flex 1/Grad case studies/Class reports/finallll.csv')
-
-################ Exploratory Data Analysis ################################
-
-### PENDING
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-##################### Visualization ########################################
-merge_survey_sales %>%  group_by(ResponseId)
-
-
-# Plots -------------------------------------------------------------------
-filter(survey_data_copy, Q1_NPS_GROUP != "NA" & Q1_NPS_GROUP != "") %>%
-  ggplot(aes(Q1_NPS_GROUP)) + 
-  geom_bar(fill = "steelblue", width = 0.2) +
-  xlab("NPS Groups")
-
-filter(survey_data_copy, Q1 >=0) %>%
-  ggplot(aes(Q1)) + 
-  geom_bar(fill = "steelblue") +
-  facet_grid(. ~ na.omit(Q1_NPS_GROUP))+
-  xlab("NPS Score")
-
-filter(merge_survey_sales, Owner.Age.Bin != "NA" & Q1 != "NA") %>%
-  dplyr::select(Owner.Age.Bin, Q1_NPS_GROUP,ResponseId) %>%
-  group_by(ResponseId) %>% 
-  unique() %>%
-  ggplot(aes(Owner.Age.Bin, fill = Q1_NPS_GROUP)) +
-  geom_bar(position = "dodge") +
-  scale_fill_manual(values = c("tomato2", "slategray3", "steelblue"))+
-  labs(x = "Owner Age Bin",
-       fill = "NPS Group") 
-
-filter(merge_survey_sales, Agent.Gender != "NA"& Agent.Gender != "" &
-         Q1_NPS_GROUP != "NA" & Q1_NPS_GROUP != "") %>%
-  dplyr::select(Agent.Gender, Q1_NPS_GROUP, ResponseId) %>%
-  group_by(ResponseId) %>%
-  unique() %>%
-  ggplot(aes(Agent.Gender)) +
-  geom_density(color = "Darkseagreen")
-
-
-filter(merge_survey_sales, Agent.Gender != "NA"& Agent.Gender != "" &
-         Q1_NPS_GROUP != "NA" & Q1_NPS_GROUP != "") %>%
-  dplyr::select(Agent.Gender, Q1_NPS_GROUP, ResponseId) %>%
-  group_by(ResponseId) %>%
-  unique() %>%
-  ggplot(aes(Q1_NPS_GROUP, fill = Agent.Gender)) +
-  geom_bar(width = 0.5)+
-  scale_fill_manual(values = c("tomato2", "slategray3", "steelblue", "grey")) +
-  xlab("Q1 NPS GROUP")
-
-filter(merge_survey_sales, Agent.Gender != "NA"& Agent.Gender != "" &
-         Q1_NPS_GROUP != "NA" & Q1_NPS_GROUP != "") %>%
-  dplyr::select(Agent.Gender, Q1_NPS_GROUP, ResponseId) %>%
-  
-  corr_data <- dplyr::select(merge_survey_sales,Q1_NPS_GROUP, 
-                             Annualized.Premium,Life.Policies, DI.Policies, AN.Policies, Coverage.Face.Amount)
-ggcorr(unique(corr_data))
-ggpairs(corr_data)
-
-filter(merge_survey_sales, Q1_NPS_GROUP == "Detractor") %>%
-  group_by(ResponseId)%>%
-  dplyr::select( ResponseId,Main.Agency.State )%>%
-  unique() %>%
-  ggplot(aes(Main.Agency.State)) +
-  geom_bar(fill = "steelblue") +
-  coord_flip()
-
-test <- filter(merge_survey_sales) %>%
-  group_by(ResponseId, Main.Agency.State)%>%
-  dplyr::select(Main.Agency.State,Q1_NPS_GROUP)%>%
-  unique() %>%
-  ggplot(aes(Main.Agency.State, fill = Q1_NPS_GROUP)) +
-  geom_bar() +
-  coord_flip()
-test$ResponseId <- NULL
-group_by(test, Main.Agency.State) %>% sort()
-
-filter(merge_survey_sales, Life.Policies > 0) %>%
-  group_by(ResponseId)%>%
-  dplyr::select( ResponseId,Coverage.Face.Amount, Main.Agency.State)%>%
-  unique() %>%
-  ggplot(aes(Main.Agency.State, Coverage.Face.Amount)) +
-  geom_boxplot(fill = "steelblue")
-
-
-
-#one hot encoding
-###################################################################################
-#dmy <- dummyVars( "~ Q1", data = survey_data_copy)
-#trnsf <- data.frame(predict(dmy, newdata = survey_data_copy))
-#trnsf
 
 
 #######  End of Data Wrangling ###########
@@ -966,6 +856,18 @@ Y<-as.numeric(pred_test)
 
 #MSPE
 mean((X-Y)^2)
+
+##logistic regression###
+glm_model <- glm(Q1_NPS_MODIFIED ~ . , data = train[,!names(train) %in% c("Q1_NPS_GROUP")],family = "binomial")
+
+predicted_values <- predict(glm_model, type = "response")
+
+predict_binary <- as.numeric(predicted_values > 0.50)
+
+Accuracy(train$Q1_NPS_MODIFIED,predict_binary)
+##########################
+
+
 
 #####################################################################################
 ################         ORDINAL LOGISTIC REGRESSION        #########################
