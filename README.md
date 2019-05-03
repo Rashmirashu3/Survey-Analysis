@@ -1,7 +1,11 @@
 # Survey-Analysis
+The final commented code can be found in the file "Final Updated code"
+The code consists of the following 4 parts:
 
-Rashmi_Code.R file has survey key creation code, sales data aggregation. 
-Pending: 
-1. Survey data (Mohit)
-2. Aggregating sales data and survey key (Dharahas)
-3. Upon completion of 1 and 2, create consolidated dataset (Anusha)
+1. Data Cleaning 
+
+2. Data wrangling and Aggreagtion
+
+3. Modelling(Random forests and Logistic Regression)
+
+4. Text analysis using Unsupervised learning algorithms
