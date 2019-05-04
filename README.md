@@ -36,8 +36,12 @@ A simple dot product with the DTM of your new documents will get new topic predi
 
 Both methods are available through predict.lda_topic_model with the method argument (“dot” or “gibbs”). Which method should you use? In most cases, we have used dot method, as it has higher speed and topic distribution.
 
+## Models to Predict NPS Score
+1. Multinomial Logistic Regression
+2. Random Forest
 
-References for text classification using topic modeling:
+
+### References for text classification using topic modeling:
 
 https://cran.r-project.org/web/packages/textmineR/vignettes/c_topic_modeling.html
 https://medium.com/@tomar.ankur287/topic-modeling-using-lda-and-gibbs-sampling-explained-49d49b3d1045
