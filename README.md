@@ -70,9 +70,10 @@ A simple dot product with the DTM of your new documents will get new topic predi
 Both methods are available through predict.lda_topic_model with the method argument (“dot” or “gibbs”). Which method should you use? In most cases, we have used dot method, as it has higher speed and topic distribution.
 
 
-### References for text classification using topic modeling:
+### References:
 
-https://cran.r-project.org/web/packages/textmineR/vignettes/c_topic_modeling.html
-https://medium.com/@tomar.ankur287/topic-modeling-using-lda-and-gibbs-sampling-explained-49d49b3d1045
-https://www.tidytextmining.com/topicmodeling.html
-https://www.kaggle.com/regiso/tips-and-tricks-for-building-topic-models-in-r
+1. https://cran.r-project.org/web/packages/textmineR/vignettes/c_topic_modeling.html
+2. https://medium.com/@tomar.ankur287/topic-modeling-using-lda-and-gibbs-sampling-explained-49d49b3d1045
+3. https://www.tidytextmining.com/topicmodeling.html
+4. https://www.kaggle.com/regiso/tips-and-tricks-for-building-topic-models-in-r
+5. https://rpubs.com/wsevier/LDA
