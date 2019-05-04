@@ -4,7 +4,7 @@ The final commented code can be found in the file "Code - Survey Analysis.R"
 
 The code consists of the following 3 parts:
 
-### 1. Data Preparation: 
+### 1. Data Preparation
 
 #####  1.1 Data Cleaning 
 #####  1.2 Data Wrangling
@@ -16,8 +16,7 @@ The code consists of the following 3 parts:
 
 ### 3. Text analysis using unsupervised learning algorithms
 
-
-
+~~
 
 ## 1. Data Preparation
 
