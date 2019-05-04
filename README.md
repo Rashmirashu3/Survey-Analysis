@@ -6,13 +6,13 @@ The code consists of the following 3 parts:
 
 1. Data Preparation: 
 
-a. Data Cleaning 
-b. Data Wrangling
+  a. Data Cleaning 
+  b. Data Wrangling
 
 2. Modeling 
 
-a. Logistic Regression
-b. Random forest
+  a. Logistic Regression
+  b. Random forest
 
 3. Text analysis using unsupervised learning algorithms
 
