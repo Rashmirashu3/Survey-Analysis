@@ -19,7 +19,8 @@ The code consists of the following 3 parts:
 
 ## 1. Data Preparation
 
-This section can be found in the document "Data Wrangling Report.pdf"
+This section can be found in the document "Data Wrangling Report.pdf". 
+The final fields used for the analysis can be found in the file "Final Fields used for Analysis.xlsx"
 
 ## 2. Models to Predict NPS Score
 1. Multinomial Logistic Regression
