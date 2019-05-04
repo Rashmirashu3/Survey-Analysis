@@ -11,6 +11,14 @@ The code consists of the following 4 parts:
 
 4. Text analysis using unsupervised learning algorithms:
 
+## 1. Data Cleaning
+
+## 2. Data wrangling
+
+## 3. Modeling
+
+## 4. Text analysis
+
 ### Overview:
 This analysis was done on detractors population for survey responses of Q3, Q8 and promoters population for survey responses of Q3.
 We have created Document Term Matrix by implementing NLP and tokenization. We have taken tokens of both unigrams and bigrams in our analysis. Later, Latent Dirchlet Allocation with Gibbs sampling is used to group the similar tokens and label the topics with most frequent bigrams. 
