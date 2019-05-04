@@ -11,11 +11,11 @@ The code consists of the following 4 parts:
 
 4. Text analysis using unsupervised learning algorithms:
 
-Overview:
+### Overview:
 This analysis was done on detractors population for survey responses of Q3, Q8 and promoters population for survey responses of Q3.
 We have created Document Term Matrix by implementing NLP and tokenization. We have taken tokens of both unigrams and bigrams in our analysis. Later, Latent Dirchlet Allocation with Gibbs sampling is used to group the similar tokens and label the topics with most frequent bigrams. 
 
-Evaluation of the Model:
+### Evaluation of the Model:
 Probabilistic coherence measures how associated words are in a topic, controlling for statistical independence. For example, suppose you have a corpus of articles from the sports section of a newspaper. A topic with the words {sport, sports, ball, fan, athlete} would look great if you look at correlation, without correcting for independence. But we actually know that it’s a terrible topic because the words are so frequent in this corpus as to be meaningless. In other words, they are highly correlated with each other but they are statistically-independent of each other.
 
 For each pair of words {a,b} in the top M words in a topic, probabilistic coherence calculates P(b|a)−P(b), where {a} is more probable than {b} in the topic.
@@ -29,7 +29,7 @@ P(b|c)−P(c), P(b|d)−P(d)
 P(c|d)−P(d)
 And all 6 differences are averaged together, giving the probabilistic coherence measure.
 
-Prediction:
+### Prediction:
 A simple dot product with the DTM of your new documents will get new topic predictions.
 
 Θnew=A⋅ΓT
