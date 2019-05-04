@@ -17,6 +17,8 @@ The code consists of the following 3 parts:
 ### 3. Text analysis using unsupervised learning algorithms
 
 
+
+
 ## 1. Data Preparation
 
 This section can be found in the document "Data Wrangling Report.pdf". 
