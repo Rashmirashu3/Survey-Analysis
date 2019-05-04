@@ -1,5 +1,5 @@
 # Net Promoter Score - Survey Analysis
-The final commented code can be found in the file "Final Updated code"
+The final commented code can be found in the file "Code - Survey Analysis.R"
 The code consists of the following 4 parts:
 
 1. Data Cleaning 
