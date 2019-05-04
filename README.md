@@ -1,17 +1,27 @@
 # Net Promoter Score - Survey Analysis
+
 The final commented code can be found in the file "Code - Survey Analysis.R"
-The code consists of the following 4 parts:
 
-1. Data Cleaning 
+The code consists of the following 3 parts:
 
-2. Data wrangling and Aggreagtion
+### 1. Data Preparation: 
 
-3. Modeling (Random forest and Logistic Regression)
+#####  1.1 Data Cleaning 
+#####  1.2 Data Wrangling
+
+### 2. Modeling 
+
+#####  2.1 Logistic Regression
+#####  2.2 Random forest
+
+### 3. Text analysis using unsupervised learning algorithms
 
 
-4. Text analysis using unsupervised learning algorithms:
+## 1. Data Preparation
 
-## 3. Models to Predict NPS Score
+This section can be found in the document "Data Wrangling Report.PDF"
+
+## 2. Models to Predict NPS Score
 1. Multinomial Logistic Regression
 2. Random Forest
 
@@ -32,7 +42,7 @@ The most important variables for Random Forest turned out to be the following.
 
 We then used Hyper parameter tuning with "ranger" package in R to perform parameter tuning. There were total 256 different models tested to find the best fit which reduced the OOB-error to 25.53%
 
-## 4. Text Analysis
+## 3. Text Analysis
 
 ### Overview:
 This analysis was done on detractors population for survey responses of Q3, Q8 and promoters population for survey responses of Q3.
