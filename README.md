@@ -1,18 +1,25 @@
 # Net Promoter Score - Survey Analysis
+
 The final commented code can be found in the file "Code - Survey Analysis.R"
-The code consists of the following 4 parts:
+
+The code consists of the following 3 parts:
 
 1. Data Preparation: 
+
 a. Data Cleaning 
 b. Data Wrangling
 
 2. Modeling 
+
 a. Logistic Regression
 b. Random forest
 
 3. Text analysis using unsupervised learning algorithms
 
+
 ## 1. Data Preparation
+
+This section can be found in the document "Data Wrangling Report.docx"
 
 ## 2. Models to Predict NPS Score
 1. Multinomial Logistic Regression
