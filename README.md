@@ -39,7 +39,9 @@ The most important variables for Random Forest turned out to be the following.
 * Owner Age Bin
 * Agent Tenure Bin
 * Agent Age Bin
-* ann Account Value
+* Annuity Account Value
+
+To see the list of all the important variables and related plots, refer to the file "Variable Importance - Random forest.xlsx"
 
 We then used Hyper parameter tuning with "ranger" package in R to perform parameter tuning. There were total 256 different models tested to find the best fit which reduced the OOB-error to 25.53%
 
