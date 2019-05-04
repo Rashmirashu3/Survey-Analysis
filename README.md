@@ -40,6 +40,13 @@ Both methods are available through predict.lda_topic_model with the method argum
 1. Multinomial Logistic Regression
 2. Random Forest
 
+We have used machine learning techniquest to predict NPS scores of customers who might not have participated in the survey. 
+Out of the two techniques Random Forest performed performed better with 76% accuracy. 
+
+The most important variables for Random Forest turned out to be the following. 
+* 
+
+
 
 ### References for text classification using topic modeling:
 
