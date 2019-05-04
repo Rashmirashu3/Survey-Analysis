@@ -1,4 +1,4 @@
-# Net Promoter Score Survey-Analysis
+# Net Promoter Score - Survey Analysis
 The final commented code can be found in the file "Final Updated code"
 The code consists of the following 4 parts:
 
@@ -38,6 +38,7 @@ Both methods are available through predict.lda_topic_model with the method argum
 
 
 References for text classification using topic modeling:
+
 https://cran.r-project.org/web/packages/textmineR/vignettes/c_topic_modeling.html
 https://medium.com/@tomar.ankur287/topic-modeling-using-lda-and-gibbs-sampling-explained-49d49b3d1045
 https://www.tidytextmining.com/topicmodeling.html
