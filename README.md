@@ -2,16 +2,19 @@
 The final commented code can be found in the file "Code - Survey Analysis.R"
 The code consists of the following 4 parts:
 
-1. Data Cleaning 
+1. Data Preparation: 
+a. Data Cleaning 
+b. Data Wrangling
 
-2. Data wrangling and Aggreagtion
+2. Modeling 
+a. Logistic Regression
+b. Random forest
 
-3. Modeling (Random forest and Logistic Regression)
+3. Text analysis using unsupervised learning algorithms
 
+## 1. Data Preparation
 
-4. Text analysis using unsupervised learning algorithms:
-
-## 3. Models to Predict NPS Score
+## 2. Models to Predict NPS Score
 1. Multinomial Logistic Regression
 2. Random Forest
 
@@ -32,7 +35,7 @@ The most important variables for Random Forest turned out to be the following.
 
 We then used Hyper parameter tuning with "ranger" package in R to perform parameter tuning. There were total 256 different models tested to find the best fit which reduced the OOB-error to 25.53%
 
-## 4. Text Analysis
+## 3. Text Analysis
 
 ### Overview:
 This analysis was done on detractors population for survey responses of Q3, Q8 and promoters population for survey responses of Q3.
