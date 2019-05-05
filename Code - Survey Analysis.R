@@ -1,22 +1,19 @@
 #install.packages('boxr')
-library(boxr)
-library(dplyr)
-library(plyr)
+library(boxr)#reading from box
+library(dplyr)#data manipulation
+library(plyr)#data manipulation
 library(memisc)
-library(stringr)
-library(tidyr)
+library(stringr)#string manipulations
+library(tidyr)#tidying the data
 library(gtools)
-library(data.table)
-library(caret)
-library(randomForest)
-library(GGally)
-library(corrplot)
-library(data.table)
-#install below packages
+library(data.table)#used for the set names functions
+library(caret)#tuning the random forest 
+library(randomForest)#doing random forests
 library(qdap)
 library(mltools)
-library(fastDummies)
-library(MLmetrics)
+library(fastDummies)#dummifying the data
+library(MLmetrics)#calculating metrics like accuracy
+library(textmineR)#performing topic modelling using LDA
 devtools::source_gist("4959237")
 
 box_auth()
@@ -886,9 +883,6 @@ Accuracy(train$Q1_NPS_MODIFIED,predict_binary)
 
 
 ######### Survey text analysis ###############
-
-install.packages("textmineR")
-library(textmineR)
 
 # load survey data set from textmineR
 str(survey_data)
