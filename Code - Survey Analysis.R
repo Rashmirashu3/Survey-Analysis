@@ -16,6 +16,7 @@ library(data.table)
 library(qdap)
 library(mltools)
 library(fastDummies)
+library(MLmetrics)
 devtools::source_gist("4959237")
 
 box_auth()
@@ -858,7 +859,22 @@ Y<-as.numeric(pred_test)
 mean((X-Y)^2)
 
 ##logistic regression###
-glm_model <- glm(Q1_NPS_MODIFIED ~ . , data = train[,!names(train) %in% c("Q1_NPS_GROUP")],family = "binomial")
+#remove labels that have single value
+names_list <- c(
+  "di.Account.Value",
+  "di.Net.Cash.Value",
+  "ann.Coverage.Face.Amount",
+  "rp.Annualized.Premium",
+  "rp.Net.Cash.Value",
+  "rp.Coverage.Face.Amount",
+  "rp.Account.Value",
+  "IND",
+  "Bill.Frequency_WEEKLY",
+  "Q1_NPS_GROUP"
+)
+
+str(train[,!names(train) %in% names_list])
+glm_model <- glm(Q1_NPS_MODIFIED ~ . , data = train[,!names(train) %in% names_list],family = "binomial")
 
 predicted_values <- predict(glm_model, type = "response")
 
