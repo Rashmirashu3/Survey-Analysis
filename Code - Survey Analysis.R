@@ -804,10 +804,11 @@ var.imp = data.frame(importance(survey.rf,type=2))
 ####Now, detractors vs others
 
 
+rfdata2$Q1_NPS_MODIFIED<-ifelse(rfdata2$Q1_NPS_GROUP=="Detractor","1","0")
 str(rfdata2)
 rfdata2=rfdata2 %>% dplyr::mutate_if(is.character, as.factor)
 
-rfdata2$Q1_NPS_MODIFIED<-ifelse(rfdata2$Q1_NPS_GROUP=="Detractor","1","0")
+
 set.seed(123456)
 ## 75% of the sample size
 
@@ -818,36 +819,15 @@ train_ind <- sample(seq_len(nrow(rfdata2)), size = smp_size)
 train <- rfdata2[train_ind, ]
 test <- rfdata2[-train_ind, ]
 
-train <- na.omit(train[,!names(train) %in% c("Q1_NPS_GROUP")])
-test  <-  na.omit(test[,!names(train) %in% c("Q1_NPS_GROUP")])
+
 #Fitting Random forest
 ##Note: Please remove any fields that are overly dependent sometimes it might not help 
-survey.rf2 <- randomForest(as.factor(Q1_NPS_MODIFIED) ~ . , data = train)
-#survey.rf2=randomForest(Q1_NPS_MODIFIED ~ . , data = train[,!names(train) %in% c("Q1_NPS_GROUP")], na.action=na.omit)
+survey.rf2=randomForest(Q1_NPS_MODIFIED ~ . , data = train[,!names(train) %in% c("Q1_NPS_GROUP")], na.action=na.omit)
 survey.rf2
 
 
 #For Classification problem - errors in each class and Black line- OOB error
-plot(survey.rf2, lwd=rep(2, 3))
-legend("right", legend = c("OOB Error", "FPR", "FNR"), lwd=rep(2, 3), 
-       lty = c(1,2,3), col = c("black", "red", "green"))
-
-
-# ROC ---------------------------------------------------------------------
-
-library(ROCR)
-rf.roc<-roc(train$Q1_NPS_MODIFIED,survey.rf2$votes[,2])
-plot(rf.roc)
-auc(rf.roc)
-
-rf.pred<- predict(survey.rf2, type = "prob")[,2]
-pred_train <- prediction(rf.pred, train$Q1_NPS_MODIFIED)
-perf <- performance(pred_train, "tpr", "fpr")
-plot(perf, colorize=TRUE)
-
-
-
-
+plot(survey.rf2)
 
 #Plot for variable importance
 library(caret)
@@ -857,7 +837,7 @@ table(Final_data$Product.Type)
 #Variable Importance
 var.imp2 = data.frame(importance(survey.rf2,type=2))
 
-#write.csv(var.imp2, "C:/Users/Rashu/Desktop/Class notes/Sem 2/flex 1/Grad case studies/rfdet.csv")
+write.csv(var.imp2, "C:/Users/Rashu/Desktop/Class notes/Sem 2/flex 1/Grad case studies/rfdet.csv")
 
 #In sample prediction
 
@@ -877,94 +857,6 @@ Y<-as.numeric(pred_test)
 #MSPE
 mean((X-Y)^2)
 
-
-# Hyper parameter tuning (Anusha Code)--------------------------------------------------
-# Random Forest -----------------------------------------------------------
-###########################################################################
-
-# define parametrs --------------------------------------------------------
-
-features <- setdiff(names(train), "Q1_NPS_MODIFIED")
-library(ranger)
-set.seed(123)
-
-# Random Forest with Ranger Package ---------------------------------------
-# Gives OOB error 26.94 ---------------------------------------------------
-rf_ranger <- ranger(
-  formula   = as.factor(Q1_NPS_MODIFIED) ~ ., 
-  data      = train, 
-  num.trees = 1000,
-  mtry      = floor(length(features) / 3)
-)
-
-
-# Search for 256 different models ------------------------------------------
-hyper_grid <- expand.grid(
-  mtry       = seq(4, 35, by = 2),
-  node_size  = seq(3, 9, by = 2),
-  sampe_size = c(.55, .632, .70, .80),
-  OOB_RMSE   = 0
-)
-
-# total number of combinations - 256
-nrow(hyper_grid)
-
-for(i in 1:nrow(hyper_grid)) {
-  
-  # train model
-  model <- ranger(
-    formula         = Q1_NPS_MODIFIED ~ ., 
-    data            = train, 
-    num.trees       = 500,
-    mtry            = hyper_grid$mtry[i],
-    min.node.size   = hyper_grid$node_size[i],
-    sample.fraction = hyper_grid$sampe_size[i],
-    seed            = 123
-  )
-  
-  # add OOB error to grid
-  hyper_grid$OOB_RMSE[i] <- sqrt(model$prediction.error)
-}
-
-hyper_grid %>% 
-  dplyr::arrange(OOB_RMSE) %>%
-  head(10)
-
-# best model from parameter tuning ----------------------------------------
-# OOB reduced to  25.53% (1 % decrease from before tuning) ---------------------------------------------------------
-best_rf_model <- ranger(
-  formula         = Q1_NPS_MODIFIED ~ ., 
-  data            = train, 
-  num.trees       = 500,
-  mtry            = 6,
-  min.node.size   = 7,
-  sample.fraction = 0.7,
-  seed            = 123
-)
-
-
-# AUC function ---------------------------------------------------------------------
-auc <- function( scores, lbls )
-{
-  stopifnot( length(scores) == length(lbls) )
-  jp <- which( lbls > 0 ); np <- length( jp )
-  jn <- which( lbls <= 0); nn <- length( jn )
-  s0 <- sum( rank(scores)[jp] )
-  (s0 - np*(np+1) / 2) / (np*nn)
-}   
-
-
-# AUC for Train  ----------------------------------------------------------
-pred.data <- predict(best_rf_model, dat = train,)
-table(pred.data$predictions)
-auc(pred.data$predictions, train$Q1_NPS_MODIFIED)
-
-
-# AUC for test ------------------------------------------------------------
-pred.data <- predict(best_rf_model, dat = test,)
-table(pred.data$predictions)
-auc(pred.data$predictions, test$Q1_NPS_MODIFIED)
-
 ##logistic regression###
 glm_model <- glm(Q1_NPS_MODIFIED ~ . , data = train[,!names(train) %in% c("Q1_NPS_GROUP")],family = "binomial")
 
@@ -975,103 +867,6 @@ predict_binary <- as.numeric(predicted_values > 0.50)
 Accuracy(train$Q1_NPS_MODIFIED,predict_binary)
 ##########################
 
-
-
-#####################################################################################
-################         ORDINAL LOGISTIC REGRESSION        #########################
-#####################################################################################
-
-######### CV
-rfdata2 <- rfdata2[,!names(rfdata2) %in% ("IND")]
-str(rfdata2)
-
-require(caret)
-
-classes <- rfdata2[, "Q1_NPS_GROUP"]
-predictors <- rfdata2[, -match(c("Q1_NPS_GROUP"), colnames(rfdata2))]
-
-train_set <- createDataPartition(classes, p = 0.8, list = FALSE)
-str(train_set)
-
-
-train_predictors <- predictors[train_set, ]
-train_classes <- classes[train_set]
-test_predictors <- predictors[-train_set, ]
-test_classes <- classes[-train_set]
-
-set.seed(2019)
-
-cv_splits <- createFolds(classes, k = 10, returnTrain = TRUE)
-str(cv_splits)
-
-
-library(nnet)
-set.seed(2019)
-
-
-rfdata2_train <- rfdata2[train_set, ]
-rfdata2_test <- rfdata2[-train_set, ]
-
-glmnet_grid <- expand.grid(alpha = c(0,  .1,  .2, .4, .6, .8, 1),
-                           lambda = seq(.01, .2, length = 20))
-
-glmnet_ctrl <- trainControl(method = "cv", number = 10)
-
-glmnet_fit <- train(Q1_NPS_GROUP ~ ., data = rfdata2_train,
-                    method = "multinom",
-                    preProcess = c("center", "scale"),
-                    tuneGrid = glmnet_grid,
-                    trControl = glmnet_ctrl)
-
-glmnet_fit
-
-
-mul_model <- multinom(train$Q1_NPS_GROUP ~ .,data = train)
-summary(mul_model)
-
-#### CV train dataset
-
-install.packages("Metrics")
-library(Metrics)
-
-# repeat cross validate by iterating through all the data to give every variable a chance of being test and train portions
-totalError <- c()
-totalError2 <- c()
-totalAccuracy  <- c()
-
-cv <- 10
-maxiterations <- 500 # try it again with a lower value and notice the mean error
-cvDivider <- floor(nrow(rfdata2) / (cv+1))
-
-for (cv in seq(1:cv)) {
-  # assign chunk to data test
-  dataTestIndex <- c((cv * cvDivider):(cv * cvDivider + cvDivider))
-  dataTest <- rfdata2[dataTestIndex,]
-  # everything else to train
-  dataTrain <- rfdata2[-dataTestIndex,]
-  
-  cylModel <- multinom(Q1_NPS_GROUP~., data=dataTrain, maxit=maxiterations, trace=T) 
-  
-  pred <- predict(cylModel, dataTest)
-  pred_train <-predict(cylModel, dataTrain)
-  
-  #  classification error
-  err <- ce(as.numeric(dataTest$Q1_NPS_GROUP), as.numeric(pred))
-  totalError <- c(totalError, err)
-  
-  err2 <- ce(as.numeric(dataTrain$Q1_NPS_GROUP), as.numeric(pred_train))
-  totalError2 <- c(totalError2, err2)
-  
-  #  classification error
-  cv_ac <- postResample(dataTest$Q1_NPS_GROUP, pred)[[1]]
-  print(paste('Current Accuracy:',cv_ac,'for CV:',cv))
-  totalAccuracy <- c(totalAccuracy, cv_ac)
-  
-}
-
-print(paste('MSPE of all repeated cross validations:',mean(totalError)))
-print(paste('Mean error of all repeated cross validations:',mean(totalError2)))
-print(paste('Mean Accuracy:',mean(totalAccuracy)))
 
 
 ######### Survey text analysis ###############
